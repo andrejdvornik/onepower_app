@@ -60,6 +60,8 @@ ignore = [
     "E731",   # Do not assign a lambda expression, use a def
     "B008",   # Do not perform function calls in argument defaults
     "B023",   # Function definition does not bind loop variable
+    "B905",   # Do not use `is` with a literal
+    "C408",   # Unnecessary list comprehension - rewrite as a generator expression
 ]
 
 # Import organization (Ruff's import sorting is enabled by default)
