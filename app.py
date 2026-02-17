@@ -336,13 +336,6 @@ if __name__ == '__main__':
 
     st.set_page_config(layout='wide')
 
-    col1, col2, col3 = st.columns([1, 1, 7])
-    with col1:
-        st.link_button('OnePower PyPi package', 'https://pypi.org/project/onepower/')
-    with col2:
-        st.link_button(
-            'OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower'
-        )
     st.image(
         'https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png',
         width=500,
@@ -361,6 +354,12 @@ if __name__ == '__main__':
     if 'reference_model' not in st.session_state:
         st.session_state.reference_model = None
 
+    st.sidebar.link_button(
+        'OnePower PyPi package', 'https://pypi.org/project/onepower/'
+    )
+    st.sidebar.link_button(
+        'OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower'
+    )
     st.sidebar.header('Input Parameters and Settings')
 
     compare_reference = st.sidebar.toggle('Compare to reference model', False)
