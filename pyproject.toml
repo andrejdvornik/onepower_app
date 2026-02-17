@@ -1,0 +1,83 @@
+[tool.ruff]
+# Line length
+line-length = 88
+
+include = ["*.pyi", "*.py"]
+
+# Exclude files/directories
+exclude = [
+    "docs/*",
+    "legacy_input_files/*",
+    "benchmarks/*",
+    "cosmosis_modules/example_ini_files/*",
+    "cosmosis_modules/legacy/*",
+    "cosmosis_modules/pk_to_real/*",
+    "cosmosis_modules/defaults_dictionary.txt",
+    "cosmosis_modules/module.yaml",
+]
+
+# Per-file ignores
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D", "T001", "T201", "B018"]
+"docs/conf.py" = ["D", "A"]
+"**/__init__.py" = ["F401"]
+"cosmosis_modules/onepower_interface.py" = ["C901"]
+
+
+[tool.ruff.format]
+# Equivalent to Black's skip-string-normalization
+quote-style = "single"
+line-ending = "lf"
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 25
+
+[tool.ruff.lint]
+extend-select = [
+    "E",    # pycodestyle
+    "W",    # pycodestyle warning
+    "UP",   # pyupgrade
+    "C90",  # mccabe complexity
+    "B",    # bugbear
+    "A",    # builtins
+    "C4",   # comprehensions
+    "DTZ",  # datetime
+    "FA",   # future annotations
+    "PIE",  # flake8-pie
+    "T",    # print statements
+    "SIM",  # simplify
+    "PTH",  # use Pathlib
+    "NPY",  # numpy-specific rules
+    "PERF", # performance
+]
+
+# Ignore rules equivalent to flake8's ignore list
+ignore = [
+    "E501",   # Line too long
+    "E731",   # Do not assign a lambda expression, use a def
+    "B008",   # Do not perform function calls in argument defaults
+    "B023",   # Function definition does not bind loop variable
+]
+
+# Import organization (Ruff's import sorting is enabled by default)
+[tool.ruff.lint.isort]
+known-first-party = ["onepower"]
+
+# Import sections (Ruff uses a similar section order)
+section-order = [
+    "future",
+    "standard-library",
+    "third-party",
+    "first-party",
+    "local-folder",
+]
+
+# Default section for imports (same as isort's default_section)
+default-section = "first-party"
+
+# Multi-line output style (3 = "Vertical Hanging Indent")
+combine-as-imports = true
+lines-after-imports = 2
