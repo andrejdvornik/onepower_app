@@ -29,7 +29,7 @@ dependencies = [
 package-mode = false
 
 [tool.poetry.dependencies]
-halomod = { git = "https://github.com/halomod/halomod.git@main", branch = "main" }
+halomod = { git = "https://github.com/halomod/halomod.git", branch = "main" }
 
 [tool.ruff]
 # Line length
