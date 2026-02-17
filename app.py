@@ -609,7 +609,7 @@ if __name__ == '__main__':
             norm_s = st.number_input(r'$\mathrm{norm}_{\mathrm{s}}$', value=0.562)
             pivot = st.number_input(r'$M_{\mathrm{pivot}}$', value=12.0)
             alpha_s = st.number_input(r'$\alpha_{\mathrm{s}}$', value=-1.18)
-            beta_s = st.number_input(r'$\beta{\mathrm{s}}$', value=2.0)
+            beta_s = st.number_input(r'$\beta_{\mathrm{s}}$', value=2.0)
             b0 = st.number_input(r'$b_0$', value=-1.17)
             b1 = st.number_input(r'$b_1$', value=1.53)
             b2 = st.number_input(r'$b_2$', value=-0.217)
