@@ -1,4 +1,4 @@
-# OnePower
+# OnePower Explorer
 
 [![Tests](https://github.com/KiDS-WL/onepower/actions/workflows/tests.yml/badge.svg)](https://github.com/KiDS-WL/onepower/)
 [![Docs](https://github.com/KiDS-WL/onepower/actions/workflows/documentation2.yml/badge.svg)](https://github.com/KiDS-WL/onepower/)
@@ -13,22 +13,11 @@
 	<img align="left" alt="i" src="https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png">
 </picture>
 
-*<p align="center"> The One Tool to Predict All Power Spectra. </p>*
+*<p align="center"> The One App to Explore the Halo Model and its Predictions. </p>*
 
 OnePower is a Python package for computing power spectra and one-point statistics using the halo model framework. It is designed for studying the galaxy-matter connection, cosmological structure formation, and intrinsic alignments, especially in the non-linear regime. This is a Web app access to explore the OnePower.
 
-## Features
-
-- Non-linear **matter-matter**, **galaxy-galaxy**, and **galaxy-matter** power spectra
-- Predictions of **stellar mass functions** and/or **luminosity functions**
-- Modeling of **intrinsic alignments** using the halo model approach
-- Built on a flexible, extensible halo model architecture
-- Includes an interface module for [CosmoSIS](https://github.com/joezuntz/cosmosis) (cloning of GitHub repository required for ease of use)
-
-OnePower is ideal for:
-- Modeling of galaxy surveys
-- Cosmological parameter inference
-- Understanding the galaxy-halo connection in nonlinear regimes
+## Access to OnePower
 
 📦 [View on GitHub](https://github.com/KiDS-WL/onepower)
 
@@ -38,7 +27,7 @@ OnePower is ideal for:
 
 ## Attribution
 
-This code originated from the merger of the IA halo model repository of Maria-Cristina Fortuna (used in [Fortuna et al. 2021](https://doi.org/10.1093/mnras/staa3802)) and the halo model code used in [Dvornik et al. 2023](https://doi.org/10.1051/0004-6361/202245158) and earlier papers.
+The OnePower code originated from the merger of the IA halo model repository of Maria-Cristina Fortuna (used in [Fortuna et al. 2021](https://doi.org/10.1093/mnras/staa3802)) and the halo model code used in [Dvornik et al. 2023](https://doi.org/10.1051/0004-6361/202245158) and earlier papers.
 It is designed to natively interact with the [CosmoSIS standard library](https://github.com/joezuntz/cosmosis-standard-library).
 
 Please cite the above papers if you find this code useful in your research:
