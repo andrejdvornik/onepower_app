@@ -336,14 +336,19 @@ if __name__ == '__main__':
 
     st.set_page_config(layout='wide')
 
+    col1, col2, col3 = st.columns([1, 1, 7])
+    with col1:
+        st.link_button('OnePower PyPi package', 'https://pypi.org/project/onepower/')
+    with col2:
+        st.link_button(
+            'OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower'
+        )
     st.image(
         'https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png',
         width=500,
     )
     st.title('The OnePower Explorer')
     st.text('The One App to Explore the Halo Model and its Predictions.')
-    st.link_button('OnePower PyPi package', 'https://pypi.org/project/onepower/')
-    st.link_button('OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower')
     st.divider()
 
     # --------------------------
