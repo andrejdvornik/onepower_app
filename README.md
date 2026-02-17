@@ -15,7 +15,7 @@
 
 *<p align="center"> The One Tool to Predict All Power Spectra. </p>*
 
-OnePower is a Python package for computing power spectra and one-point statistics using the halo model framework. It is designed for studying the galaxy-matter connection, cosmological structure formation, and intrinsic alignments, especially in the non-linear regime.
+OnePower is a Python package for computing power spectra and one-point statistics using the halo model framework. It is designed for studying the galaxy-matter connection, cosmological structure formation, and intrinsic alignments, especially in the non-linear regime. This is a Web app access to explore the OnePower.
 
 ## Features
 
@@ -35,27 +35,6 @@ OnePower is ideal for:
 📄 [Documentation](https://kids-wl.github.io/onepower/index.html)
 
 💾 [Install via PyPI](https://pypi.org/project/onepower/)
-
-
-## Example usage
-
-As OnePower has defaults for all of its parameters, a reasonable resulting power spectrum can be calculated by passing no parameters:
-
-```python
-from onepower import Spectra
-ps = Spectra()
-pk_mm = ps.power_spectrum_mm.pk_tot
-pk_mm_1h = ps.power_spectrum_mm.pk_1h
-pk_mm_2h = ps.power_spectrum_mm.pk_2h
-```
-
-You can also use the accompanying CosmoSIS interface to predict the power spectra in the CosmoSIS framework.
-That opens up many more options, specifically on the observables and statistics to predict.
-See the `.yaml` file in the CosmoSIS Standard Library or the `cosmosis_modules` folder for examples.
-
-If you want to calculate the covariance matrix for the power spectra calculated using OnePower, you can use the sister package [OneCovariance](https://github.com/rreischke/OneCovariance)!
-
----
 
 ## Attribution
 
