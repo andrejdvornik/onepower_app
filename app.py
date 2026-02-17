@@ -342,9 +342,8 @@ if __name__ == '__main__':
     )
     st.title('The OnePower Explorer')
     st.text('The One App to Explore the Halo Model and its Predictions.')
-    st.text(
-        'The OnePower can be donwloaded and installed from PyPI: https://pypi.org/project/onepower/ or from the GitHub repository: https://github.com/KiDS-WL/onepower'
-    )
+    st.link_button('OnePower PyPi package', 'https://pypi.org/project/onepower/')
+    st.link_button('OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower')
     st.divider()
 
     # --------------------------
