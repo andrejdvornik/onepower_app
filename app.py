@@ -355,10 +355,12 @@ if __name__ == '__main__':
         st.session_state.reference_model = None
 
     st.sidebar.link_button(
-        'OnePower PyPi package', 'https://pypi.org/project/onepower/'
+        'OnePower PyPi package', 'https://pypi.org/project/onepower/', width='stretch'
     )
     st.sidebar.link_button(
-        'OnePower GitHub repository', 'https://github.com/KiDS-WL/onepower'
+        'OnePower GitHub repository',
+        'https://github.com/KiDS-WL/onepower',
+        width='stretch',
     )
     st.sidebar.header('Input Parameters and Settings')
 
