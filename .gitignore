@@ -16,6 +16,7 @@ legacy_input_files/*.fits
 runs/*/chain/*
 trained_bnl/*
 pipeline_test
+onepower_app.egg-info
 src/tatooine/tatooine.egg-info
 src/tatooine.egg-info
 src/halomodel/halomodel.egg-info

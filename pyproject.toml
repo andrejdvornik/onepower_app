@@ -1,3 +1,29 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm>=8.0", "numpy"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[project]
+name = "onepower_app"
+version = "0.1"
+description = "Python package for visualising and exploring power spectra and one-point statistics using the halo model framework."
+readme = "README.md"
+authors = [
+    {name="Andrej Dvornik", email="andrej.dvornik@me.com"},
+]
+license = "MIT"
+
+requires-python = ">=3.10, <3.13"
+dependencies = [
+    "streamlit",
+    "plotly",
+    "halomod @ git+https://github.com/halomod/halomod.git@main",
+    "numpy>=2.0",
+    "onepower>=0.7.0",
+    "pre-commit",
+]
+
 [tool.ruff]
 # Line length
 line-length = 88
