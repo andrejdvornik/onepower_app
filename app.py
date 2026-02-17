@@ -326,6 +326,7 @@ if __name__ == "__main__":
     st.title("The OnePower Explorer")
     st.text("The One App to Explore the Halo Model and its Predictions.")
     st.divider()
+    
 
     # --------------------------
     # Session state for models
