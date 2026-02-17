@@ -18,7 +18,7 @@ requires-python = ">=3.10, <3.13"
 dependencies = [
     "streamlit",
     "plotly",
-    "halomod @ git+https://github.com/halomod/halomod.git@main",
+    #"halomod @ git+https://github.com/halomod/halomod.git@main",
     "numpy>=2.0",
     "onepower>=0.7.0",
     "pre-commit",
