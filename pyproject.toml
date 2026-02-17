@@ -24,6 +24,9 @@ dependencies = [
     "pre-commit",
 ]
 
+[tool.poetry]
+package-mode = false
+
 [tool.ruff]
 # Line length
 line-length = 88
