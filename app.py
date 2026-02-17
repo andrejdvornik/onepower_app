@@ -4,7 +4,7 @@ import io
 import plotly.graph_objects as go
 import plotly.colors as pc
 import plotly.io as pio
-import Path
+from pathlib import Path
 from onepower import Spectra
 
 with Path.open('load_mathjax.js') as f:
