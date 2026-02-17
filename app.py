@@ -176,6 +176,8 @@ def plot_observable(
         xaxis_type='log' if logx else 'linear',
         yaxis_type='log' if logy else 'linear',
         yaxis_range=y_range,
+        width=700,
+        height=460,
         margin=dict(l=60, r=20, t=40, b=60),
         # font=dict(family="STIXGeneral")
     )
@@ -226,6 +228,8 @@ def plot_ratio(x, y_live, x_ref, y_ref, name, logx=True):
         yaxis_type='linear',
         yaxis_title=r'$\mathrm{Relative\ difference\ } [\%]$',
         yaxis_range=[-np.max(np.absolute(ratio)), np.max(np.absolute(ratio))],
+        width=700,
+        height=460,
         margin=dict(l=60, r=20, t=40, b=60),
     )
     if name in ['mm', 'gm', 'gg']:
@@ -334,7 +338,7 @@ def compute_outputs(params, components=True):
 if __name__ == '__main__':
     set_plotly_theme_from_streamlit()
 
-    st.set_page_config(layout='wide')
+    st.set_page_config(layout='wide', page_title='OnePower Explorer')
 
     st.image(
         'https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png',
@@ -776,7 +780,7 @@ if __name__ == '__main__':
     ):
         computed_outputs = compute_outputs(params)
 
-        col1, col2, col3 = st.columns([1, 1, 7])
+        col1, col2 = st.columns(2, width=500)
         # --------------------------
         # Save Model Button
         # --------------------------
@@ -793,7 +797,7 @@ if __name__ == '__main__':
         if col2.button('Clear reference model', width='stretch'):
             st.session_state.reference_model = None
 
-        tabs = st.tabs(selected_outputs)
+        tabs = st.tabs(selected_outputs, width='stretch')
         for tab, output in zip(tabs, selected_outputs):
             with tab:
                 category, subtype = OBSERVABLE_MAP[output]
@@ -801,24 +805,26 @@ if __name__ == '__main__':
                 if subtype in computed_outputs:
                     x, y = computed_outputs[subtype]
 
-                    col1_, col2_, col3_ = st.columns([1, 1, 1])
-                    with col1_:
-                        fig_main = plot_observable(
-                            x, y, subtype, compare_reference, components=components
-                        )
-                        st.plotly_chart(fig_main, width='stretch', key=f'fig_{output}')
+                    fig_main = plot_observable(
+                        x, y, subtype, compare_reference, components=components
+                    )
+                    st.plotly_chart(
+                        fig_main, width='content', height='content', key=f'fig_{output}'
+                    )
                     if (
                         compare_reference
                         and st.session_state.reference_model is not None
                     ):
-                        with col2_:
-                            x_ref, y_ref = st.session_state.reference_model['outputs'][
-                                subtype
-                            ]
-                            fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype)
-                            st.plotly_chart(
-                                fig_ratio, width='stretch', key=f'fig_{output}_ref'
-                            )
+                        x_ref, y_ref = st.session_state.reference_model['outputs'][
+                            subtype
+                        ]
+                        fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype)
+                        st.plotly_chart(
+                            fig_ratio,
+                            width='content',
+                            height='content',
+                            key=f'fig_{output}_ref',
+                        )
 
                     # CSV download
                     # Create an in-memory buffer
