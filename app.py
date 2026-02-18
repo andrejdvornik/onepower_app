@@ -388,12 +388,12 @@ if __name__ == '__main__':
         ]
 
     st.sidebar.link_button(
-        '💾 OnePower PyPi package',
+        '💾 OnePower PyPi',
         'https://pypi.org/project/onepower/',
         width='stretch',
     )
     st.sidebar.link_button(
-        '📦 OnePower GitHub repository',
+        '📦 OnePower GitHub',
         'https://github.com/KiDS-WL/onepower',
         width='stretch',
     )
