@@ -15,12 +15,12 @@ with Path.open('load_mathjax.js') as f:
 
 
 OBSERVABLE_MAP = {
-    'Matter Power Spectrum Pmm(k)': ('pk', 'mm'),
-    'Galaxy-matter Power Spectrum Pgm(k)': ('pk', 'gm'),
-    'Galaxy-galaxy Power Spectrum Pgg(k)': ('pk', 'gg'),
-    'Intrinsic-intrinsic Power Spectrum P_II(k)': ('pk', 'ii'),
-    'Galaxy-Intrinsic Power Spectrum P_gI(k)': ('pk', 'gi'),
-    'Matter-Intrinsic Power Spectrum P_mI(k)': ('pk', 'mi'),
+    r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$': ('pk', 'mm'),
+    r'Galaxy-matter Power Spectrum $P_{\mathrm{gm}}(k)$': ('pk', 'gm'),
+    r'Galaxy-galaxy Power Spectrum $P_{\mathrm{gg}}(k)$': ('pk', 'gg'),
+    r'Intrinsic-intrinsic Power Spectrum $P_{\mathrm{II}}(k)$': ('pk', 'ii'),
+    r'Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$': ('pk', 'gi'),
+    r'Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$': ('pk', 'mi'),
     'Halo Mass Function': ('mass', 'hmf'),
     'Bias Function': ('mass', 'bias'),
     'Concentration (matter)': ('mass', 'conc_cen'),
@@ -382,11 +382,18 @@ if __name__ == '__main__':
     if 'params_hash' not in st.session_state:
         st.session_state.params_hash = None
 
+    if 'selected_outputs' not in st.session_state:
+        st.session_state.selected_outputs = [
+            r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$'
+        ]
+
     st.sidebar.link_button(
-        'OnePower PyPi package', 'https://pypi.org/project/onepower/', width='stretch'
+        '💾 OnePower PyPi package',
+        'https://pypi.org/project/onepower/',
+        width='stretch',
     )
     st.sidebar.link_button(
-        'OnePower GitHub repository',
+        '📦 OnePower GitHub repository',
         'https://github.com/KiDS-WL/onepower',
         width='stretch',
     )
@@ -396,25 +403,20 @@ if __name__ == '__main__':
     components = st.sidebar.toggle('Show individual halo model components', value=False)
 
     with st.sidebar.expander('Quantities', expanded=True):
-        selected_outputs = st.multiselect(
-            'Choose quantities to calculate',
-            [
-                'Matter Power Spectrum Pmm(k)',
-                'Galaxy-matter Power Spectrum Pgm(k)',
-                'Galaxy-galaxy Power Spectrum Pgg(k)',
-                'Intrinsic-intrinsic Power Spectrum P_II(k)',
-                'Galaxy-Intrinsic Power Spectrum P_gI(k)',
-                'Matter-Intrinsic Power Spectrum P_mI(k)',
-                'Bias Function',
-                'Concentration (matter)',
-                'Concentration (galaxies)',
-                'Halo Mass Function',
-                'Stellar Mass Function',
-                'HOD',
-            ],
-            # default=["Matter Power Spectrum Pmm(k)"]
-            default=['Matter Power Spectrum Pmm(k)'],
-        )
+        selected_outputs = []
+        for label in OBSERVABLE_MAP:
+            checked = st.checkbox(
+                label,
+                value=label in st.session_state.selected_outputs,
+                key=f'chk_{label}',
+            )
+            if checked:
+                selected_outputs.append(label)
+        st.session_state.selected_outputs = selected_outputs
+
+    no_selection = len(st.session_state.selected_outputs) == 0
+    if no_selection:
+        st.error('Please select at least one observable to compute.', icon='⚠️')
 
     with st.form('parameter_form', width=500):
         run_model = st.form_submit_button(
@@ -425,31 +427,31 @@ if __name__ == '__main__':
             with st.sidebar.expander('General settings', expanded=False):
                 kmin = st.number_input(r'$k_{\mathrm{min}}$', value=1e-3, format='%.4e')
                 kmax = st.number_input(r'$k_{\mathrm{max}}$', value=10.0)
-                nk = st.slider(r'Number of $k$ points', 10, 1000, 300)
+                nk = st.number_input(r'Number of $k$ points', 10, 1000, 300)
 
                 k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
 
                 mmin = st.number_input(r'$M_{h,\mathrm{min}}$', value=9.0)
                 mmax = st.number_input(r'$M_{h,\mathrm{max}}$', value=15.0)
-                # nm = st.slider("Number of M points", 10, 1000, 300)
+                # nm = st.number_input("Number of M points", 10, 1000, 300)
 
             with st.sidebar.expander('Cosmological Parameters', expanded=False):
-                omega_c = st.slider(r'$\Omega_{c}$', 0.1, 0.5, 0.25, 0.01)
-                omega_b = st.slider(r'$\Omega_{b}$', 0.02, 0.08, 0.05, 0.005)
-                h = st.slider(r'$h$', 0.5, 0.9, 0.7, 0.01)
-                ns = st.slider(r'$n_s$', 0.8, 1.2, 0.9, 0.005)
-                sigma_8 = st.slider(r'$\sigma_8$', 0.6, 1.0, 0.8, 0.01)
-                z_vec = st.slider(r'Redshift $z$', 0.0, 2.0, 0.0, 0.1)
-                m_nu = st.slider(
+                omega_c = st.number_input(r'$\Omega_{c}$', 0.1, 0.5, 0.25, 0.01)
+                omega_b = st.number_input(r'$\Omega_{b}$', 0.02, 0.08, 0.05, 0.005)
+                h = st.number_input(r'$h$', 0.5, 0.9, 0.7, 0.01)
+                ns = st.number_input(r'$n_s$', 0.8, 1.2, 0.9, 0.005)
+                sigma_8 = st.number_input(r'$\sigma_8$', 0.6, 1.0, 0.8, 0.01)
+                z_vec = st.number_input(r'Redshift $z$', 0.0, 2.0, 0.0, 0.1)
+                m_nu = st.number_input(
                     r'Sum of Neutrino Masses $m_{\nu} [eV]$', 0.0, 1.0, 0.06, 0.01
                 )
-                w0 = st.slider(
+                w0 = st.number_input(
                     r'Dark Energy Equation of State $w_0$', -1.5, -0.5, -1.0, 0.05
                 )
-                wa = st.slider(
+                wa = st.number_input(
                     r'Dark Energy Equation of State $w_a$', 0.0, 1.0, 0.0, 0.05
                 )
-                tcmb = st.slider(
+                tcmb = st.number_input(
                     r'CMB Temperature $T_{\mathrm{cmb}} [K]$', 2.0, 3.0, 2.7255, 0.01
                 )
 
@@ -570,20 +572,27 @@ if __name__ == '__main__':
                         'Ludlow16Empirical',
                     ),
                 )
-                overdensity = st.slider('Halo overdensity', 0.0, 500.0, 200.0, 1.0)
-                delta_c = st.slider(
-                    r'Collapse threshold $\delta_c$', 0.0, 10.0, 1.696, 0.0001
+                overdensity = st.number_input(
+                    'Halo overdensity', 0.0, 500.0, 200.0, 1.0
                 )
-                norm_cen = st.slider(
+                delta_c = st.number_input(
+                    r'Collapse threshold $\delta_c$',
+                    0.0,
+                    10.0,
+                    1.696,
+                    0.001,
+                    format='%0.3f',
+                )
+                norm_cen = st.number_input(
                     r'Normalization of $c(M)$ relation (matter)', 0.0, 2.0, 1.0, 0.01
                 )
-                norm_sat = st.slider(
+                norm_sat = st.number_input(
                     r'Normalization of $c(M)$ relation (galaxies)', 0.0, 2.0, 1.0, 0.01
                 )
-                eta_cen = st.slider(
+                eta_cen = st.number_input(
                     r'Halo bloating $\eta$ (matter)', -1.0, 1.0, 0.0, 0.01
                 )
-                eta_sat = st.slider(
+                eta_sat = st.number_input(
                     r'Halo bloating $\eta$ (galaxies)', -1.0, 1.0, 0.0, 0.01
                 )
 
@@ -591,14 +600,14 @@ if __name__ == '__main__':
                     'HMCode ingredients', [None, 'mead2020', 'mead2020_feedback', 'fit']
                 )
                 if hmcode_ingredients == 'mead2020_feedback':
-                    log10T_AGN = st.slider(
+                    log10T_AGN = st.number_input(
                         r'$\log_{10}T_{\mathrm{AGN}}$', 0.0, 10.0, 7.8, 0.01
                     )
                 else:
                     log10T_AGN = 7.8
 
                 if hmcode_ingredients == 'fit':
-                    mb = st.slider(r'$M_b$', 8.0, 15.0, 13.87, 0.01)
+                    mb = st.number_input(r'$M_b$', 8.0, 15.0, 13.87, 0.01)
                 else:
                     mb = 13.87
 
@@ -606,7 +615,7 @@ if __name__ == '__main__':
                     'Nonlinear mode', [None, 'bnl', 'hmcode', 'fortuna']
                 )
                 if nonlinear_mode == 'fortuna':
-                    t_eff = st.slider(r'$t_{\mathrm{eff}}$', 0.0, 1.0, 0.0, 0.01)
+                    t_eff = st.number_input(r'$t_{\mathrm{eff}}$', 0.0, 1.0, 0.0, 0.01)
                 else:
                     t_eff = 0.0
 
@@ -615,10 +624,10 @@ if __name__ == '__main__':
                     'HOD model',
                     ('Cacciato', 'Zheng', 'Simple', 'Zehavi', 'Zhai'),
                 )
-                obs_min = st.slider(
+                obs_min = st.number_input(
                     r'Min Observable Mass $[h^{-2} M_{\odot}]$', 8.0, 15.0, 8.0, 0.1
                 )
-                obs_max = st.slider(
+                obs_max = st.number_input(
                     r'Max Observable Mass $[h^{-2} M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
                 )
                 hod_settings = {
@@ -663,14 +672,14 @@ if __name__ == '__main__':
                     b0 = st.number_input(r'$b_0$', value=-1.17)
                     b1 = st.number_input(r'$b_1$', value=1.53)
                     b2 = st.number_input(r'$b_2$', value=-0.217)
-                    A_cen = st.slider(
+                    A_cen = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{cen}}$',
                         -1.0,
                         1.0,
                         0.0,
                         0.01,
                     )
-                    A_sat = st.slider(
+                    A_sat = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{sat}}$',
                         -1.0,
                         1.0,
@@ -703,14 +712,14 @@ if __name__ == '__main__':
                     log10_M1 = st.number_input(r'$\log_{10}M_{1}$', value=13.0)
                     sigma = st.number_input(r'$\sigma$', value=0.15)
                     alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.slider(
+                    A_cen = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{cen}}$',
                         -1.0,
                         1.0,
                         0.0,
                         0.01,
                     )
-                    A_sat = st.slider(
+                    A_sat = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{sat}}$',
                         -1.0,
                         1.0,
@@ -735,14 +744,14 @@ if __name__ == '__main__':
                         r'$\log_{10}M_{\mathrm{sat}}$', value=13.0
                     )
                     alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.slider(
+                    A_cen = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{cen}}$',
                         -1.0,
                         1.0,
                         0.0,
                         0.01,
                     )
-                    A_sat = st.slider(
+                    A_sat = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{sat}}$',
                         -1.0,
                         1.0,
@@ -765,14 +774,14 @@ if __name__ == '__main__':
                         r'$\log_{10}M_{\mathrm{sat}}$', value=13.0
                     )
                     alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.slider(
+                    A_cen = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{cen}}$',
                         -1.0,
                         1.0,
                         0.0,
                         0.01,
                     )
-                    A_sat = st.slider(
+                    A_sat = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{sat}}$',
                         -1.0,
                         1.0,
@@ -799,14 +808,14 @@ if __name__ == '__main__':
                     )
                     sigma = st.number_input(r'$\sigma$', value=0.82)
                     alpha = st.number_input(r'$\alpha$', value=0.41)
-                    A_cen = st.slider(
+                    A_cen = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{cen}}$',
                         -1.0,
                         1.0,
                         0.0,
                         0.01,
                     )
-                    A_sat = st.slider(
+                    A_sat = st.number_input(
                         r'Assembly bias parameter $A_{\mathrm{sat}}$',
                         -1.0,
                         1.0,
@@ -883,7 +892,7 @@ if __name__ == '__main__':
 
     params_changed = current_hash != st.session_state.params_hash
 
-    if should_run and params_changed:
+    if should_run and params_changed and not no_selection:
         with st.spinner(
             'Calculating the new model, please wait a moment...',
             show_time=True,
@@ -912,48 +921,53 @@ if __name__ == '__main__':
         if col2.button('Clear reference model', width='stretch'):
             st.session_state.reference_model = None
 
-        tabs = st.tabs(selected_outputs, width='stretch')
-        for tab, output in zip(tabs, selected_outputs):
-            with tab:
-                category, subtype = OBSERVABLE_MAP[output]
+        selected_outputs = st.session_state.selected_outputs
+        if not no_selection:
+            tabs = st.tabs(selected_outputs, width='stretch')
+            for tab, output in zip(tabs, selected_outputs):
+                with tab:
+                    category, subtype = OBSERVABLE_MAP[output]
 
-                if subtype in computed_outputs:
-                    x, y = computed_outputs[subtype]
+                    if subtype in computed_outputs:
+                        x, y = computed_outputs[subtype]
 
-                    fig_main = plot_observable(
-                        x, y, subtype, compare_reference, components=components
-                    )
-                    st.plotly_chart(
-                        fig_main, width='content', height='content', key=f'fig_{output}'
-                    )
-                    if (
-                        compare_reference
-                        and st.session_state.reference_model is not None
-                    ):
-                        x_ref, y_ref = st.session_state.reference_model['outputs'][
-                            subtype
-                        ]
-                        fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype)
+                        fig_main = plot_observable(
+                            x, y, subtype, compare_reference, components=components
+                        )
                         st.plotly_chart(
-                            fig_ratio,
+                            fig_main,
                             width='content',
                             height='content',
-                            key=f'fig_{output}_ref',
+                            key=f'fig_{output}',
                         )
+                        if (
+                            compare_reference
+                            and st.session_state.reference_model is not None
+                        ):
+                            x_ref, y_ref = st.session_state.reference_model['outputs'][
+                                subtype
+                            ]
+                            fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype)
+                            st.plotly_chart(
+                                fig_ratio,
+                                width='content',
+                                height='content',
+                                key=f'fig_{output}_ref',
+                            )
 
-                    # CSV download
-                    # Create an in-memory buffer
-                    with io.BytesIO() as buffer:
-                        # Write array to buffer
-                        np.savetxt(
-                            buffer,
-                            np.column_stack((x, y['tot'])),
-                            delimiter=',',
-                            header='x, y axis',
-                        )
-                        st.download_button(
-                            label='Download data as CSV',
-                            data=buffer,
-                            file_name=f'{subtype}.csv',
-                            mime='text/csv',
-                        )
+                        # CSV download
+                        # Create an in-memory buffer
+                        with io.BytesIO() as buffer:
+                            # Write array to buffer
+                            np.savetxt(
+                                buffer,
+                                np.column_stack((x, y['tot'])),
+                                delimiter=',',
+                                header='x, y axis',
+                            )
+                            st.download_button(
+                                label='Download data as CSV',
+                                data=buffer,
+                                file_name=f'{subtype}.csv',
+                                mime='text/csv',
+                            )
