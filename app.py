@@ -21,8 +21,9 @@ OBSERVABLE_MAP = {
     r'Intrinsic-intrinsic Power Spectrum $P_{\mathrm{II}}(k)$': ('pk', 'ii'),
     r'Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$': ('pk', 'gi'),
     r'Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$': ('pk', 'mi'),
+    r'Galaxy Bias $b_{\mathrm{g}}(k)$': ('pk', 'gb'),
     'Halo Mass Function': ('mass', 'hmf'),
-    'Bias Function': ('mass', 'bias'),
+    'Halo Bias Function': ('mass', 'bias'),
     'Concentration (matter)': ('mass', 'conc_cen'),
     'Concentration (galaxies)': ('mass', 'conc_sat'),
     'Stellar Mass Function': ('mass', 'smf'),
@@ -160,6 +161,7 @@ def plot_observable(
         'hmf',
         'smf',
         'bias',
+        'gb',
         'conc_cen',
         'conc_sat',
     ]:
@@ -192,18 +194,17 @@ def plot_observable(
     if name in ['mm', 'gm', 'gg', 'ii', 'gi']:
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$P(k)\,[(\mathrm{Mpc}/h)^3]$')
-        fig.update_xaxes(exponentformat='power')
-        fig.update_yaxes(exponentformat='power')
     elif name == 'mi':
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$|P(k)|\,[(\mathrm{Mpc}/h)^3]$')
-        fig.update_xaxes(exponentformat='power')
-        fig.update_yaxes(exponentformat='power')
+    elif name == 'gb':
+        fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
+        fig.update_yaxes(title=r'$b_{\mathrm{g}}(k)$')
     else:
         fig.update_xaxes(title=r'$M\,[M_\odot/h]$')
         fig.update_yaxes(title=r'$\mathrm{Quantity}$')
-        fig.update_xaxes(exponentformat='power')
-        fig.update_yaxes(exponentformat='power')
+    fig.update_xaxes(exponentformat='power')
+    fig.update_yaxes(exponentformat='power')
 
     return fig
 
@@ -259,11 +260,15 @@ def compute_power_spectrum(model, spectrum_type, components=False):
         'ii': 'power_spectrum_ii',
         'gi': 'power_spectrum_gi',
         'mi': 'power_spectrum_mi',
+        'gb': 'power_spectrum_gm',
     }
 
     ps = getattr(model, ps_attr[spectrum_type])
 
     k = model.k_vec
+    if spectrum_type == 'gb':
+        return k, {'tot': ps.galaxy_linear_bias[0, 0, :]}
+
     pk_tot = ps.pk_tot[0, 0, :]
 
     if components:
