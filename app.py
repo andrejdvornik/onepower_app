@@ -235,7 +235,7 @@ def plot_ratio(x, y_live, x_ref, y_ref, name, logx=True):
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
     )
-    if name in ['mm', 'gm', 'gg', 'gb']:
+    if name in ['mm', 'gm', 'gg', 'ii', 'gi', 'mi', 'gb']:
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
     else:
         fig.update_xaxes(title=r'$M\,[M_\odot/h]$')
