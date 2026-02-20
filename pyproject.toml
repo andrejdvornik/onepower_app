@@ -86,6 +86,7 @@ ignore = [
     "B905",   # Do not use `is` with a literal
     "C408",   # Unnecessary list comprehension - rewrite as a generator expression
     "F841",   # Unused variables
+    "SIM103", # Bool
 ]
 
 # Import organization (Ruff's import sorting is enabled by default)

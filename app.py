@@ -1,6 +1,7 @@
 import streamlit as st
 import numpy as np
 import io
+import random
 import plotly.graph_objects as go
 import plotly.colors as pc
 import plotly.io as pio
@@ -14,6 +15,22 @@ with Path.open('load_mathjax.js') as f:
     js = f.read()
     st.components.v1.html(f'<script>{js}</script>', height=0)
 
+LOADING_MESSAGES = [
+    'Consulting the Palantír of Power Spectra...',
+    'Summoning the haloes from the cosmic web...',
+    'Forging 1-halo and 2-halo terms in Mount Doom...',
+    'Traversing the large-scale structure of Middle-Universe...',
+    'Counting galaxies... precious galaxies...',
+    r'Whispering to $\sigma_8$... it changes everything...',
+    r'The Fellowship is integrating over $M_{h}$...',
+    r'Adjusting $\Omega_{\mathrm{c}}$... carefully...',
+]
+
+ERROR_MESSAGES = {
+    'compute_fail': '🔥 A Balrog has disrupted the halo model. Please check your parameters and try again.',
+    'param_inconsistent': 'The set min and max parameters are inconsistent.',
+    'numerical': '🌊 The cosmic web trembles... numerical instability detected. Adjust parameters and try again.',
+}
 
 OBSERVABLE_MAP = {
     r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$': ('pk', 'mm'),
@@ -445,7 +462,18 @@ def compute_outputs(params, components=True):
                 model, subtype, rpmin, rpmax, thetamin, thetamax, components
             )
             computed_outputs[subtype] = (x, y)
+        for item in y.values():
+            if check_numerical(item):
+                st.warning(ERROR_MESSAGES['numerical'])
     return computed_outputs
+
+
+def check_numerical(array):
+    if array is None:
+        return False
+    if np.any(~np.isfinite(array)):
+        return True
+    return False
 
 
 if __name__ == '__main__':
@@ -536,8 +564,10 @@ if __name__ == '__main__':
                 kmax = st.number_input(
                     r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=10.0
                 )
+                if kmin >= kmax:
+                    st.error(ERROR_MESSAGES['param_inconsistent'])
+                    st.stop()
                 nk = st.number_input(r'Number of $k$ points', 10, 1000, 300)
-
                 k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
 
                 mmin = st.number_input(
@@ -547,6 +577,9 @@ if __name__ == '__main__':
                     r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=15.0
                 )
                 # nm = st.number_input("Number of M points", 10, 1000, 300)
+                if mmin >= mmax:
+                    st.error(ERROR_MESSAGES['param_inconsistent'])
+                    st.stop()
 
                 rpmin = st.number_input(
                     r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$', value=0.1
@@ -554,6 +587,9 @@ if __name__ == '__main__':
                 rpmax = st.number_input(
                     r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$', value=20.0
                 )
+                if rpmin >= rpmax:
+                    st.error(ERROR_MESSAGES['param_inconsistent'])
+                    st.stop()
 
                 thetamin = st.number_input(
                     r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$', value=0.5
@@ -561,6 +597,9 @@ if __name__ == '__main__':
                 thetamax = st.number_input(
                     r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$', value=200.0
                 )
+                if thetamin >= thetamax:
+                    st.error(ERROR_MESSAGES['param_inconsistent'])
+                    st.stop()
 
             with st.sidebar.expander('Cosmological Parameters', expanded=False):
                 omega_c = st.number_input(r'$\Omega_{c}$', 0.1, 0.5, 0.25, 0.01)
@@ -757,6 +796,9 @@ if __name__ == '__main__':
                 obs_max = st.number_input(
                     r'Max Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
                 )
+                if obs_min >= obs_max:
+                    st.error(ERROR_MESSAGES['param_inconsistent'])
+                    st.stop()
                 hod_settings = {
                     'observables_file': None,
                     'zmin': np.array([0.0]),
@@ -965,11 +1007,18 @@ if __name__ == '__main__':
                     icon='⚠️',
                 )
 
+    credit = read_markdown_file('credits.md')
+    with st.sidebar.popover('Acknowledgments', width='stretch'):
+        st.markdown(credit)
+
     if 'Stellar Mass Function' in selected_outputs and hod_model != 'Cacciato':
         st.warning(
             f'The Stellar Mass Function cannot be computed with the {hod_model} HOD model, since it does not include an explicit observable-mass relation. Please switch to the Cacciato HOD model to compute the SMF.',
             icon='⚠️',
+            width=500,
         )
+    if compare_reference and st.session_state.reference_model is None:
+        st.warning('No reference model is set.', icon='⚠️', width=500)
 
     params = {
         'omega_c': omega_c,
@@ -1024,11 +1073,18 @@ if __name__ == '__main__':
     params_changed = current_hash != st.session_state.params_hash
 
     if should_run and params_changed and not no_selection:
+        loading_message = random.choice(LOADING_MESSAGES)
         with st.spinner(
-            'Calculating the new model, please wait a moment...',
+            loading_message,
             show_time=True,
         ):
-            st.session_state.computed_outputs = compute_outputs(params)
+            try:
+                st.session_state.computed_outputs = compute_outputs(params)
+            except Exception as e:
+                st.error(ERROR_MESSAGES['compute_fail'])
+                with st.expander('🛠 Debug details'):
+                    st.code(f'Error type: {type(e).__name__}')
+                st.stop()
 
         st.session_state.params_hash = current_hash
         st.session_state.has_run = True
