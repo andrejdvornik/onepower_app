@@ -338,10 +338,14 @@ def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=
         sep_min_in = None
         sep_max_in = None
     transformer = PkTransformer(
-        corr_type, model, sep_min_in=sep_min_in, sep_max_in=sep_max_in
+        corr_type,
+        model,
+        sep_min_in=sep_min_in,
+        sep_max_in=sep_max_in,
+        components=components,
     )
     if components:
-        sep, xi, xi_1h, xi_2h = transformer(components=components)
+        sep, xi, xi_1h, xi_2h = transformer()
         return sep, {'tot': xi, '1h': xi_1h, '2h': xi_2h}
     else:
         sep, xi = transformer()

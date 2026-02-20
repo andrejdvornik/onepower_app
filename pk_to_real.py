@@ -185,6 +185,8 @@ class PkTransformer(Transformer):
         sep_min_in=None,
         sep_max_in=None,
         n_transform=None,
+        z_s=None,
+        components=False,
     ):
 
         self.corr_type = corr_type
@@ -203,6 +205,8 @@ class PkTransformer(Transformer):
 
         self.k_vec = self.model.k_vec  # h/Mpc
         self.z_l = self.model.z_vec[0]
+        self.z_s = z_s
+        self.components = components
 
         # --- Cosmology ---
         cosmo = self.model.cosmo_model
@@ -234,17 +238,17 @@ class PkTransformer(Transformer):
 
     # --------------------------------------------------------
 
-    def __call__(self, z_s=None, components=False):
+    def __call__(self):
 
         if self.corr_type == 'ds':
             P = self.model.power_spectrum_gm.pk_tot[0, 0, :]
-            if components:
+            if self.components:
                 P_1h = self.model.power_spectrum_gm.pk_1h[0, 0, :]
                 P_2h = self.model.power_spectrum_gm.pk_2h[0, 0, :]
 
         elif self.corr_type == 'wp' or self.corr_type == 'wtheta':
             P = self.model.power_spectrum_gg.pk_tot[0, 0, :]
-            if components:
+            if self.components:
                 P_1h = self.model.power_spectrum_gg.pk_1h[0, 0, :]
                 P_2h = self.model.power_spectrum_gg.pk_2h[0, 0, :]
 
@@ -253,13 +257,13 @@ class PkTransformer(Transformer):
             a_l = 1.0 / (1.0 + self.z_l)
 
             # --- Kernel W in 1/Mpc ---
-            if z_s is None:
+            if self.z_s is None:
                 W = (3 * self.H0**2 * self.Omega_m / (2 * c**2)) * (
                     self.chi_l_Mpc / a_l
                 )
             else:
                 chi_s_Mpc = (
-                    self.model.cosmo_model.comoving_distance(z_s).to('Mpc').value
+                    self.model.cosmo_model.comoving_distance(self.z_s).to('Mpc').value
                 )
 
                 W = (
@@ -270,7 +274,7 @@ class PkTransformer(Transformer):
 
             if self.corr_type == 'gamma':
                 P = W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_tot[0, 0, :]
-                if components:
+                if self.components:
                     P_1h = (
                         W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_1h[0, 0, :]
                     )
@@ -280,7 +284,7 @@ class PkTransformer(Transformer):
 
             else:  # xi+ or xi-
                 P = W**2 * (1.0 / self.h) * self.model.power_spectrum_mm.pk_tot[0, 0, :]
-                if components:
+                if self.components:
                     P_1h = (
                         W**2
                         * (1.0 / self.h)
@@ -295,14 +299,14 @@ class PkTransformer(Transformer):
             raise ValueError('Unknown transform type')
 
         sep_out, xi = super().__call__(self.k_vec, P)
-        if components:
+        if self.components:
             _, xi_1h = super().__call__(self.k_vec, P_1h)
             _, xi_2h = super().__call__(self.k_vec, P_2h)
 
         if self.corr_type == 'ds':
             xi *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
             xi /= 1e12  # M_sun / pc^2
-            if components:
+            if self.components:
                 xi_1h *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
                 xi_1h /= 1e12  # M_sun / pc^2
                 xi_2h *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
@@ -317,6 +321,6 @@ class PkTransformer(Transformer):
 
             sep_out = sep_out / (conv * self.h)
 
-        if components:
+        if self.components:
             return sep_out, xi, xi_1h, xi_2h
         return sep_out, xi
