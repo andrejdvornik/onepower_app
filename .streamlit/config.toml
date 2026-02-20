@@ -52,6 +52,7 @@ headingFont = "Inter"                 # Consistent typography - Bootstrap style
 codeFont = "JetBrainsMono"            # Clean monospace for code blocks
 codeBackgroundColor = "#f8f9fa"       # Light gray code background - Bootstrap style
 showSidebarBorder = true
+baseFontSize = 13
 
 [theme.sidebar]
 backgroundColor = "#f8f9fa"           # Bootstrap gray-50 - clean sidebar

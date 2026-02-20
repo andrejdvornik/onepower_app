@@ -8,6 +8,7 @@ from pathlib import Path
 import hashlib
 import json
 from onepower import Spectra
+from pk_to_real import PkTransformer
 
 with Path.open('load_mathjax.js') as f:
     js = f.read()
@@ -28,6 +29,12 @@ OBSERVABLE_MAP = {
     'Concentration (galaxies)': ('mass', 'conc_sat'),
     'Stellar Mass Function': ('mass', 'smf'),
     'HOD': ('mass', 'hod'),
+    r'$\Delta \Sigma (r_{\mathrm{p}})$': ('proj', 'ds'),
+    r'$w_{\mathrm{p}}(r_{\mathrm{p}})$': ('proj', 'wp'),
+    r'$w(\theta)$': ('proj', 'wtheta'),
+    r'$\gamma_{\mathrm{t}}(\theta)$': ('proj', 'gamma'),
+    r'$\xi_{+} (\theta)$': ('proj', 'xip'),
+    r'$\xi_{-} (\theta)$': ('proj', 'xim'),
 }
 
 
@@ -164,6 +171,12 @@ def plot_observable(
         'gb',
         'conc_cen',
         'conc_sat',
+        'ds',
+        'wp',
+        'wtheta',
+        'gamma',
+        'xip',
+        'xim',
     ]:
         y_range = [np.log10(np.min(y['tot']) * 0.5), np.log10(np.max(y['tot']) * 2)]
     elif name == 'mi':
@@ -200,9 +213,38 @@ def plot_observable(
     elif name == 'gb':
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$b_{\mathrm{g}}(k)$')
-    else:
-        fig.update_xaxes(title=r'$M\,[M_\odot/h]$')
-        fig.update_yaxes(title=r'$\mathrm{Quantity}$')
+    elif name == 'wp':
+        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
+        fig.update_yaxes(
+            title=r'$w_{\mathrm{p}}(r_{\mathrm{p}})\,[h^{-1}\,\mathrm{Mpc}]$'
+        )
+    elif name == 'ds':
+        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
+        fig.update_yaxes(title=r'$\Delta \Sigma\,[hM_{\odot}/\mathrm{pc}^2]$')
+    elif name == 'wtheta':
+        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
+        fig.update_yaxes(title=r'$w(\theta)$')
+    elif name == 'gamma':
+        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
+        fig.update_yaxes(title=r'$\gamma_{\mathrm{t}}(\theta)$')
+    elif name == 'xip' or name == 'xim':
+        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
+        fig.update_yaxes(title=r'$\xi_{+}(\theta)$')
+    elif name == 'hod':
+        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
+        fig.update_yaxes(title=r'$<N|M>$')
+    elif name == 'smf':
+        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
+        fig.update_yaxes(title=r'$\Phi\,[h^{3} \mathrm{dex}^{-1} \mathrm{Mpc}^{-3}]$')
+    elif name == 'hmf':
+        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
+        fig.update_yaxes(title=r'$\mathrm{d}n / \mathrm{d} \mathrm{ln} M$')
+    elif name == 'bias':
+        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
+        fig.update_yaxes(title=r'$b_{h}(M)$')
+    elif name == 'conc_cen' or name == 'conc_sat':
+        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
+        fig.update_yaxes(title=r'$c(M)$')
     fig.update_xaxes(exponentformat='power')
     fig.update_yaxes(exponentformat='power')
 
@@ -237,8 +279,14 @@ def plot_ratio(x, y_live, x_ref, y_ref, name, logx=True):
     )
     if name in ['mm', 'gm', 'gg', 'ii', 'gi', 'mi', 'gb']:
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-    else:
-        fig.update_xaxes(title=r'$M\,[M_\odot/h]$')
+    elif name == 'wp' or name == 'ds':
+        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
+    elif name in ['wtheta', 'gamma', 'xip', 'xim']:
+        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
+    elif name in ['hmf', 'conc_cen', 'conc_sat', 'bias']:
+        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
+    elif name in ['hod', 'smf']:
+        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
 
     # Add horizontal unity line
     fig.add_hline(y=0.0, line_width=1)
@@ -277,6 +325,23 @@ def compute_power_spectrum(model, spectrum_type, components=False):
         return k, {'tot': pk_tot, '1h': pk_1h, '2h': pk_2h}
 
     return k, {'tot': pk_tot}
+
+
+def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=False):
+    if corr_type in ['ds', 'wp']:
+        sep_min_in = rpmin
+        sep_max_in = rpmax
+    elif corr_type in ['wtheta', 'gamma', 'xip', 'xim']:
+        sep_min_in = thetamin
+        sep_max_in = thetamax
+    else:
+        sep_min_in = None
+        sep_max_in = None
+    transformer = PkTransformer(
+        corr_type, model, sep_min_in=sep_min_in, sep_max_in=sep_max_in
+    )
+    sep, xi = transformer()
+    return sep, {'tot': xi}
 
 
 def compute_mass_quantity(model, quantity, components=False):
@@ -341,8 +406,18 @@ def hash_params(params):
 
 @st.cache_resource(show_spinner=False, ttl='30m')
 def compute_outputs(params, components=True):
+    rpmin = params['rpmin']
+    rpmax = params['rpmax']
+    thetamin = params['thetamin']
+    thetamax = params['thetamax']
+    del params['rpmin']
+    del params['rpmax']
+    del params['thetamin']
+    del params['thetamax']
+
     st.session_state.init_model.update(**params)
     model = st.session_state.init_model
+
     computed_outputs = {}
     for output in OBSERVABLE_MAP:
         category, subtype = OBSERVABLE_MAP[output]
@@ -351,6 +426,11 @@ def compute_outputs(params, components=True):
             computed_outputs[subtype] = (x, y)
         elif category == 'mass':
             x, y = compute_mass_quantity(model, subtype, components)
+            computed_outputs[subtype] = (x, y)
+        elif category == 'proj':
+            x, y = compute_proj(
+                model, subtype, rpmin, rpmax, thetamin, thetamax, components
+            )
             computed_outputs[subtype] = (x, y)
     return computed_outputs
 
@@ -430,15 +510,39 @@ if __name__ == '__main__':
         )
         with st.sidebar:
             with st.sidebar.expander('General settings', expanded=False):
-                kmin = st.number_input(r'$k_{\mathrm{min}}$', value=1e-3, format='%.4e')
-                kmax = st.number_input(r'$k_{\mathrm{max}}$', value=10.0)
+                kmin = st.number_input(
+                    r'$k_{\mathrm{min}}\,[h\,\mathrm{Mpc}^{-1}]$',
+                    value=1e-3,
+                    format='%.4e',
+                )
+                kmax = st.number_input(
+                    r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=10.0
+                )
                 nk = st.number_input(r'Number of $k$ points', 10, 1000, 300)
 
                 k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
 
-                mmin = st.number_input(r'$M_{h,\mathrm{min}}$', value=9.0)
-                mmax = st.number_input(r'$M_{h,\mathrm{max}}$', value=15.0)
+                mmin = st.number_input(
+                    r'$M_{h,\mathrm{min}}\,[h^{-1}\,M_{\odot}]$', value=9.0
+                )
+                mmax = st.number_input(
+                    r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=15.0
+                )
                 # nm = st.number_input("Number of M points", 10, 1000, 300)
+
+                rpmin = st.number_input(
+                    r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$', value=0.1
+                )
+                rpmax = st.number_input(
+                    r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$', value=20.0
+                )
+
+                thetamin = st.number_input(
+                    r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$', value=0.5
+                )
+                thetamax = st.number_input(
+                    r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$', value=200.0
+                )
 
             with st.sidebar.expander('Cosmological Parameters', expanded=False):
                 omega_c = st.number_input(r'$\Omega_{c}$', 0.1, 0.5, 0.25, 0.01)
@@ -630,10 +734,10 @@ if __name__ == '__main__':
                     ('Cacciato', 'Zheng', 'Simple', 'Zehavi', 'Zhai'),
                 )
                 obs_min = st.number_input(
-                    r'Min Observable Mass $[h^{-2} M_{\odot}]$', 8.0, 15.0, 8.0, 0.1
+                    r'Min Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 8.0, 0.1
                 )
                 obs_max = st.number_input(
-                    r'Max Observable Mass $[h^{-2} M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
+                    r'Max Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
                 )
                 hod_settings = {
                     'observables_file': None,
@@ -888,6 +992,10 @@ if __name__ == '__main__':
         'hod_settings': hod_settings,
         'hod_params': hod_params,
         'hod_model': hod_model,
+        'rpmin': rpmin,
+        'rpmax': rpmax,
+        'thetamin': thetamin,
+        'thetamax': thetamax,
     }
     current_hash = hash_params(params)
     # --------------------------
@@ -932,6 +1040,16 @@ if __name__ == '__main__':
             for tab, output in zip(tabs, selected_outputs):
                 with tab:
                     category, subtype = OBSERVABLE_MAP[output]
+                    if params['z_vec'][0] == 0.0 and subtype in [
+                        'wtheta',
+                        'gamma',
+                        'xip',
+                        'xim',
+                    ]:
+                        st.warning(
+                            f'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model!',
+                            icon='⚠️',
+                        )
 
                     if subtype in computed_outputs:
                         x, y = computed_outputs[subtype]

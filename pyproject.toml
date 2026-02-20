@@ -21,7 +21,7 @@ dependencies = [
     "halomod @ git+https://github.com/halomod/halomod.git@main",
     "onepower>=0.7.0",
     "pre-commit",
-    "mathjax"
+    "mathjax",
 ]
 
 [tool.poetry]
@@ -38,19 +38,13 @@ exclude = [
     "docs/*",
     "legacy_input_files/*",
     "benchmarks/*",
-    "cosmosis_modules/example_ini_files/*",
-    "cosmosis_modules/legacy/*",
-    "cosmosis_modules/pk_to_real/*",
-    "cosmosis_modules/defaults_dictionary.txt",
-    "cosmosis_modules/module.yaml",
+    "pk_to_real.py",
+    "pyfftlog.py",
 ]
 
 # Per-file ignores
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D", "T001", "T201", "B018"]
-"docs/conf.py" = ["D", "A"]
 "**/__init__.py" = ["F401"]
-"cosmosis_modules/onepower_interface.py" = ["C901"]
 
 
 [tool.ruff.format]
