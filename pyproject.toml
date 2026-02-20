@@ -39,7 +39,7 @@ exclude = [
     "legacy_input_files/*",
     "benchmarks/*",
     "pk_to_real.py",
-    "pyfftlog.py",
+    #"pyfftlog.py",
 ]
 
 # Per-file ignores
