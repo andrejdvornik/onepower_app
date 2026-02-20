@@ -340,8 +340,12 @@ def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=
     transformer = PkTransformer(
         corr_type, model, sep_min_in=sep_min_in, sep_max_in=sep_max_in
     )
-    sep, xi = transformer()
-    return sep, {'tot': xi}
+    if components:
+        sep, xi, xi_1h, xi_2h = transformer(components=components)
+        return sep, {'tot': xi, '1h': xi_1h, '2h': xi_2h}
+    else:
+        sep, xi = transformer()
+        return sep, {'tot': xi}
 
 
 def compute_mass_quantity(model, quantity, components=False):
@@ -404,7 +408,7 @@ def hash_params(params):
     return hashlib.md5(params_string.encode()).hexdigest()
 
 
-@st.cache_resource(show_spinner=False, ttl='30m')
+@st.cache_resource(show_spinner=False, ttl=1800)
 def compute_outputs(params, components=True):
     rpmin = params['rpmin']
     rpmax = params['rpmax']
@@ -1040,16 +1044,24 @@ if __name__ == '__main__':
             for tab, output in zip(tabs, selected_outputs):
                 with tab:
                     category, subtype = OBSERVABLE_MAP[output]
-                    if params['z_vec'][0] == 0.0 and subtype in [
+                    if subtype in [
                         'wtheta',
                         'gamma',
                         'xip',
                         'xim',
                     ]:
-                        st.warning(
-                            f'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model!',
-                            icon='⚠️',
-                        )
+                        if params['z_vec'][0] == 0.0:
+                            st.warning(
+                                f'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model! Moreover, it is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+                                icon='⚠️',
+                                width=700,
+                            )
+                        else:
+                            st.warning(
+                                f'The {output} function is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+                                icon='⚠️',
+                                width=700,
+                            )
 
                     if subtype in computed_outputs:
                         x, y = computed_outputs[subtype]

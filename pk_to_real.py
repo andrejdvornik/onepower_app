@@ -234,13 +234,19 @@ class PkTransformer(Transformer):
 
     # --------------------------------------------------------
 
-    def __call__(self, z_s=None):
+    def __call__(self, z_s=None, components=False):
 
         if self.corr_type == 'ds':
             P = self.model.power_spectrum_gm.pk_tot[0, 0, :]
+            if components:
+                P_1h = self.model.power_spectrum_gm.pk_1h[0, 0, :]
+                P_2h = self.model.power_spectrum_gm.pk_2h[0, 0, :]
 
         elif self.corr_type == 'wp' or self.corr_type == 'wtheta':
             P = self.model.power_spectrum_gg.pk_tot[0, 0, :]
+            if components:
+                P_1h = self.model.power_spectrum_gg.pk_1h[0, 0, :]
+                P_2h = self.model.power_spectrum_gg.pk_2h[0, 0, :]
 
         elif self.corr_type in ['gamma', 'xip', 'xim']:
             c = 299792.458
@@ -264,17 +270,43 @@ class PkTransformer(Transformer):
 
             if self.corr_type == 'gamma':
                 P = W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_tot[0, 0, :]
+                if components:
+                    P_1h = (
+                        W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_1h[0, 0, :]
+                    )
+                    P_2h = (
+                        W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_2h[0, 0, :]
+                    )
 
             else:  # xi+ or xi-
                 P = W**2 * (1.0 / self.h) * self.model.power_spectrum_mm.pk_tot[0, 0, :]
+                if components:
+                    P_1h = (
+                        W**2
+                        * (1.0 / self.h)
+                        * self.model.power_spectrum_mm.pk_1h[0, 0, :]
+                    )
+                    P_2h = (
+                        W**2
+                        * (1.0 / self.h)
+                        * self.model.power_spectrum_mm.pk_2h[0, 0, :]
+                    )
         else:
             raise ValueError('Unknown transform type')
 
         sep_out, xi = super().__call__(self.k_vec, P)
+        if components:
+            _, xi_1h = super().__call__(self.k_vec, P_1h)
+            _, xi_2h = super().__call__(self.k_vec, P_2h)
 
         if self.corr_type == 'ds':
             xi *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
             xi /= 1e12  # M_sun / pc^2
+            if components:
+                xi_1h *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
+                xi_1h /= 1e12  # M_sun / pc^2
+                xi_2h *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
+                xi_2h /= 1e12  # M_sun / pc^2
 
         if self.corr_type in ['wtheta', 'gamma', 'xip', 'xim']:
             conv = (
@@ -285,4 +317,6 @@ class PkTransformer(Transformer):
 
             sep_out = sep_out / (conv * self.h)
 
+        if components:
+            return sep_out, xi, xi_1h, xi_2h
         return sep_out, xi
