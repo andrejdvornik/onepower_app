@@ -2,6 +2,8 @@ import numpy as np
 import pyfftlog
 import scipy.interpolate
 
+# Adapted from CosmoSIS Standard Library module, including the pyfftlog.py
+
 # These are the ones the user can use
 TRANSFORM_WP = 'wp'
 TRANSFORM_DS = 'ds'
