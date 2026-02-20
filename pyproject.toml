@@ -38,7 +38,7 @@ exclude = [
     "docs/*",
     "legacy_input_files/*",
     "benchmarks/*",
-    "pk_to_real.py",
+    #"pk_to_real.py",
     #"pyfftlog.py",
 ]
 
@@ -85,6 +85,7 @@ ignore = [
     "B023",   # Function definition does not bind loop variable
     "B905",   # Do not use `is` with a literal
     "C408",   # Unnecessary list comprehension - rewrite as a generator expression
+    "F841",   # Unused variables
 ]
 
 # Import organization (Ruff's import sorting is enabled by default)

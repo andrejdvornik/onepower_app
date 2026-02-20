@@ -1,17 +1,15 @@
 import numpy as np
 import pyfftlog
 import scipy.interpolate
-import astropy.units as u
-import astropy.constants as const
 
 # These are the ones the user can use
-TRANSFORM_WP = "wp"
-TRANSFORM_DS = "ds"
-TRANSFORM_W = "wtheta"
-TRANSFORM_XI = "xi"
-TRANSFORM_XIP = "xip"
-TRANSFORM_XIM = "xim"
-TRANSFORM_GAMMA = "gamma"
+TRANSFORM_WP = 'wp'
+TRANSFORM_DS = 'ds'
+TRANSFORM_W = 'wtheta'
+TRANSFORM_XI = 'xi'
+TRANSFORM_XIP = 'xip'
+TRANSFORM_XIM = 'xim'
+TRANSFORM_GAMMA = 'gamma'
 
 DEFAULT_N_TRANSFORM = 8192
 DEFAULT_K_MIN = 0.0001
@@ -20,8 +18,14 @@ DEFAULT_RP_MIN = 0.1
 DEFAULT_RP_MAX = 1000.0
 
 
-TRANSFORMS = [TRANSFORM_WP, TRANSFORM_DS, TRANSFORM_W,
-              TRANSFORM_XIP, TRANSFORM_XIM, TRANSFORM_GAMMA]
+TRANSFORMS = [
+    TRANSFORM_WP,
+    TRANSFORM_DS,
+    TRANSFORM_W,
+    TRANSFORM_XIP,
+    TRANSFORM_XIM,
+    TRANSFORM_GAMMA,
+]
 
 # Bias q and order mu parameters for transform
 _TRANSFORM_PARAMETERS = {
@@ -32,6 +36,7 @@ _TRANSFORM_PARAMETERS = {
     TRANSFORM_XIM: (0.0, 4.0),
     TRANSFORM_GAMMA: (0.0, 2.0),
 }
+
 
 class LogInterp:
     """
@@ -45,15 +50,26 @@ class LogInterp:
     def __init__(self, angle, spec, kind):
         if np.all(spec > 0):
             self.interp_func = scipy.interpolate.interp1d(
-                np.log(angle), np.log(spec), kind, bounds_error=False, fill_value='extrapolate')
+                np.log(angle),
+                np.log(spec),
+                kind,
+                bounds_error=False,
+                fill_value='extrapolate',
+            )
             self.interp_type = 'loglog'
         elif np.all(spec < 0):
             self.interp_func = scipy.interpolate.interp1d(
-                np.log(angle), np.log(-spec), kind, bounds_error=False, fill_value='extrapolate')
+                np.log(angle),
+                np.log(-spec),
+                kind,
+                bounds_error=False,
+                fill_value='extrapolate',
+            )
             self.interp_type = 'minus_loglog'
         else:
             self.interp_func = scipy.interpolate.interp1d(
-                np.log(angle), spec, kind, bounds_error=False, fill_value='extrapolate')
+                np.log(angle), spec, kind, bounds_error=False, fill_value='extrapolate'
+            )
             self.interp_type = 'log_ang'
 
     def __call__(self, angle):
@@ -74,8 +90,9 @@ class Transformer:
     galaxy-galaxy lensing.
     """
 
-    def __init__(self, transform_type, n, k_min, k_max,
-                 sep_min, sep_max, lower=1.0, upper=-2.0):
+    def __init__(
+        self, transform_type, n, k_min, k_max, sep_min, sep_max, lower=1.0, upper=-2.0
+    ):
 
         # We use a fixed ell grid in log space and will interpolate/extrapolate our inputs onto this
         # grid. We typically use a maximum ell very much higher than the range we have physical values
@@ -96,8 +113,7 @@ class Transformer:
         self.q, self.mu = _TRANSFORM_PARAMETERS[transform_type]
 
         # Prepare the Hankel transform.
-        self.kr, self.xsave = pyfftlog.fhti(
-            n, self.mu, dlogr, q=self.q, kropt=kropt)
+        self.kr, self.xsave = pyfftlog.fhti(n, self.mu, dlogr, q=self.q, kropt=kropt)
 
         # We always to the inverse transform, from Fourier->Real.
         self.direction = -1
@@ -119,9 +135,8 @@ class Transformer:
 
         # And the effective separations of the output
         self.sep = np.exp((x - nc) * dlogr) * r_mid
-        #self.rp = np.degrees(self.rp_rad) * 60.0
+        # self.rp = np.degrees(self.rp_rad) * 60.0
         self.range = (self.sep > self.sep_min) & (self.sep < self.sep_max)
-
 
     def __call__(self, k_in, pk_in, chi_l=None):
         """Convert the input k and P(k) points to the points this transform requires, and then
@@ -131,11 +146,17 @@ class Transformer:
         pk = self._interpolate_and_extrapolate_pk(k_in, pk_in)
 
         if self.q == 0:
-            xi = pyfftlog.fht(self.k * pk, self.xsave,
-                              tdir=self.direction) / (2 * np.pi) / self.sep
+            xi = (
+                pyfftlog.fht(self.k * pk, self.xsave, tdir=self.direction)
+                / (2 * np.pi)
+                / self.sep
+            )
         else:
-            xi = pyfftlog.fhtq(self.k * pk, self.xsave,
-                               tdir=self.direction) / (2 * np.pi) / self.sep
+            xi = (
+                pyfftlog.fhtq(self.k * pk, self.xsave, tdir=self.direction)
+                / (2 * np.pi)
+                / self.sep
+            )
 
         return self.sep[self.range], xi[self.range]
 
@@ -145,21 +166,26 @@ class Transformer:
         k_max = k[-1]
         interpolator = LogInterp(k, pk, 'linear')
         pk_out = interpolator(self.k)
-        #bad_low = np.isnan(pk_out) & (self.k < k_min)
-        #bad_high = np.isnan(pk_out) & (self.k > k_max)
+        # bad_low = np.isnan(pk_out) & (self.k < k_min)
+        # bad_high = np.isnan(pk_out) & (self.k > k_max)
 
-        #pk_out[bad_low] = pk[0] * (self.k[bad_low] / k_min)**self.lower
-        #pk_out[bad_high] = pk[-1] * (self.k[bad_high] / k_max)**self.upper
+        # pk_out[bad_low] = pk[0] * (self.k[bad_low] / k_min)**self.lower
+        # pk_out[bad_high] = pk[-1] * (self.k[bad_high] / k_max)**self.upper
 
         return pk_out
 
 
 class PkTransformer(Transformer):
-
-    def __init__(self, corr_type, model,
-                 k_min=None, k_max=None,
-                 sep_min_in=None, sep_max_in=None,
-                 n_transform=None):
+    def __init__(
+        self,
+        corr_type,
+        model,
+        k_min=None,
+        k_max=None,
+        sep_min_in=None,
+        sep_max_in=None,
+        n_transform=None,
+    ):
 
         self.corr_type = corr_type
         self.model = model
@@ -186,8 +212,8 @@ class PkTransformer(Transformer):
 
         # --- Comoving distance ---
         chi_Mpc = cosmo.comoving_distance(self.z_l + 1e-6).to('Mpc').value
-        self.chi_l_Mpc = chi_Mpc              # Mpc (for lensing kernel)
-        self.chi_l = chi_Mpc * self.h         # Mpc/h (for Hankel transform)
+        self.chi_l_Mpc = chi_Mpc  # Mpc (for lensing kernel)
+        self.chi_l = chi_Mpc * self.h  # Mpc/h (for Hankel transform)
 
         # --- Separation limits ---
         if corr_type in ['ds', 'wp']:
@@ -195,75 +221,67 @@ class PkTransformer(Transformer):
             sep_max = sep_max_in
         else:
             # convert arcmin → Mpc/h
-            conv = cosmo.kpc_comoving_per_arcmin(
-                self.z_l + 1e-6
-            ).to('Mpc / arcmin').value
+            conv = (
+                cosmo.kpc_comoving_per_arcmin(self.z_l + 1e-6).to('Mpc / arcmin').value
+            )
 
             sep_min = sep_min_in * conv * self.h
             sep_max = sep_max_in * conv * self.h
 
         self.n = n_transform
 
-        super().__init__(
-            corr_type,
-            self.n,
-            k_min,
-            k_max,
-            sep_min,
-            sep_max
-        )
+        super().__init__(corr_type, self.n, k_min, k_max, sep_min, sep_max)
 
     # --------------------------------------------------------
 
     def __call__(self, z_s=None):
 
-        if self.corr_type == "ds":
+        if self.corr_type == 'ds':
             P = self.model.power_spectrum_gm.pk_tot[0, 0, :]
 
-        elif self.corr_type == "wp":
+        elif self.corr_type == 'wp' or self.corr_type == 'wtheta':
             P = self.model.power_spectrum_gg.pk_tot[0, 0, :]
 
-        elif self.corr_type == "wtheta":
-            P = self.model.power_spectrum_gg.pk_tot[0, 0, :]
-
-        elif self.corr_type in ["gamma", "xip", "xim"]:
-
+        elif self.corr_type in ['gamma', 'xip', 'xim']:
             c = 299792.458
             a_l = 1.0 / (1.0 + self.z_l)
 
             # --- Kernel W in 1/Mpc ---
             if z_s is None:
-                W = (3 * self.H0**2 * self.Omega_m / (2 * c**2)) \
-                    * (self.chi_l_Mpc / a_l)
+                W = (3 * self.H0**2 * self.Omega_m / (2 * c**2)) * (
+                    self.chi_l_Mpc / a_l
+                )
             else:
-                chi_s_Mpc = self.model.cosmo_model.comoving_distance(
-                    z_s
-                ).to('Mpc').value
+                chi_s_Mpc = (
+                    self.model.cosmo_model.comoving_distance(z_s).to('Mpc').value
+                )
 
-                W = (3 * self.H0**2 * self.Omega_m / (2 * c**2)) \
-                    * (self.chi_l_Mpc / a_l) \
+                W = (
+                    (3 * self.H0**2 * self.Omega_m / (2 * c**2))
+                    * (self.chi_l_Mpc / a_l)
                     * ((chi_s_Mpc - self.chi_l_Mpc) / chi_s_Mpc)
+                )
 
-            if self.corr_type == "gamma":
-                P = W  * (1.0 / self.h) * \
-                    self.model.power_spectrum_gm.pk_tot[0, 0, :]
+            if self.corr_type == 'gamma':
+                P = W * (1.0 / self.h) * self.model.power_spectrum_gm.pk_tot[0, 0, :]
 
             else:  # xi+ or xi-
-                P = W**2 * (1.0 / self.h) * \
-                    self.model.power_spectrum_mm.pk_tot[0, 0, :]
+                P = W**2 * (1.0 / self.h) * self.model.power_spectrum_mm.pk_tot[0, 0, :]
         else:
-            raise ValueError("Unknown transform type")
+            raise ValueError('Unknown transform type')
 
         sep_out, xi = super().__call__(self.k_vec, P)
 
-        if self.corr_type == "ds":
-            xi *= self.model.mean_density0[0]   # M_sun / (Mpc/h)^3
-            xi /= 1e12                          # M_sun / pc^2
+        if self.corr_type == 'ds':
+            xi *= self.model.mean_density0[0]  # M_sun / (Mpc/h)^3
+            xi /= 1e12  # M_sun / pc^2
 
-        if self.corr_type in ["wtheta", "gamma", "xip", "xim"]:
-            conv = self.model.cosmo_model.kpc_comoving_per_arcmin(
-                self.z_l + 1e-6
-            ).to('Mpc / arcmin').value
+        if self.corr_type in ['wtheta', 'gamma', 'xip', 'xim']:
+            conv = (
+                self.model.cosmo_model.kpc_comoving_per_arcmin(self.z_l + 1e-6)
+                .to('Mpc / arcmin')
+                .value
+            )
 
             sep_out = sep_out / (conv * self.h)
 
