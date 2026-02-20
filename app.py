@@ -38,6 +38,11 @@ OBSERVABLE_MAP = {
 }
 
 
+def read_markdown_file(file_path):
+    with Path.open(file_path) as file:
+        return file.read()
+
+
 def get_streamlit_theme():
 
     return {
@@ -490,6 +495,11 @@ if __name__ == '__main__':
         'https://github.com/KiDS-WL/onepower',
         width='stretch',
     )
+
+    intro = read_markdown_file('intro.md')
+    with st.sidebar.popover('Introduction and Quick Start Guide', width='stretch'):
+        st.markdown(intro)
+
     st.sidebar.header('Input Parameters and Settings')
 
     compare_reference = st.sidebar.toggle('Compare to reference model', False)
