@@ -54,6 +54,103 @@ OBSERVABLE_MAP = {
     r'$\xi_{-} (\theta)$': ('proj', 'xim'),
 }
 
+OBSERVABLE_DESCRIPTIONS = {
+    r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$': r"""
+    **Matter Power Spectrum $P_{\mathrm{mm}}(k)$**
+    The Fourier-space two-point statistic of total matter density fluctuations.
+    Encodes the scale-dependent clustering amplitude of the matter field.
+    """,
+    r'Galaxy-matter Power Spectrum $P_{\mathrm{gm}}(k)$': r"""
+    **Galaxy-Matter Power Spectrum $P_{\mathrm{gm}}(k)$**
+    Cross-power spectrum between galaxies and matter.
+    Sensitive to galaxy bias and the galaxy-halo connection.
+    """,
+    r'Galaxy-galaxy Power Spectrum $P_{\mathrm{gg}}(k)$': r"""
+    **Galaxy-Galaxy Power Spectrum $P_{\mathrm{gg}}(k)$**
+    Clustering of galaxies in Fourier space.
+    Depends on cosmology and the Halo Occupation Distribution (HOD).
+    """,
+    r'Intrinsic-intrinsic Power Spectrum $P_{\mathrm{II}}(k)$': r"""
+    **Intrinsic-Intrinsic Power Spectrum $P_{\mathrm{II}}(k)$**
+    Auto-spectrum of intrinsic galaxy shape alignments.
+    Relevant for intrinsic alignment contamination in weak lensing analyses.
+    """,
+    r'Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$': r"""
+    **Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$**
+    Cross-correlation between galaxy positions and intrinsic shapes.
+    Contributes to galaxy-galaxy lensing systematics.
+    """,
+    r'Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$': r"""
+    **Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$**
+    Cross-correlation between matter density and intrinsic galaxy alignments.
+    Important for modelling weak lensing systematics.
+    """,
+    r'Galaxy Bias $b_{\mathrm{g}}(k)$': r"""
+    **Galaxy Bias $b_{\mathrm{g}}(k)$**
+    Scale-dependent bias defined via $b_g(k)=P_{gm}(k)/P_{mm}(k)$ or related estimators.
+    Quantifies how galaxies trace the underlying matter field.
+    """,
+    'Halo Mass Function': r"""
+    **Halo Mass Function (HMF)**
+    Number density of dark matter haloes as a function of mass.
+    A fundamental prediction of structure formation theory.
+    """,
+    'Halo Bias Function': r"""
+    **Halo Bias Function**
+    Mass-dependent clustering bias of dark matter haloes relative to matter.
+    Determines how halo populations trace large-scale structure.
+    """,
+    'Concentration (matter)': r"""
+    **Halo Concentration (matter)**
+    Mass-concentration relation for dark matter haloes.
+    Controls the internal density profile of haloes.
+    """,
+    'Concentration (galaxies)': r"""
+    **Halo Concentration (galaxies)**
+    Effective concentration governing satellite galaxy distribution inside haloes.
+    """,
+    'Stellar Mass Function': r"""
+    **Stellar Mass Function (SMF)**
+    Number density of galaxies as a function of stellar mass.
+    Connects cosmology to galaxy formation physics.
+    """,
+    'HOD': r"""
+    **Halo Occupation Distribution (HOD)**
+    Mean number of galaxies hosted by a halo of given mass.
+    Separates contributions from central and satellite galaxies.
+    """,
+    r'$\Delta \Sigma (r_{\mathrm{p}})$': r"""
+    **Excess Surface Density $\Delta \Sigma(r_p)$**
+    Projected galaxy-matter correlation measured in galaxy-galaxy lensing.
+    Probes the average mass distribution around galaxies.
+    """,
+    r'$w_{\mathrm{p}}(r_{\mathrm{p}})$': r"""
+    **Projected Correlation Function $w_p(r_p)$**
+    Line-of-sight integrated galaxy correlation function.
+    Redshift-space distortion-insensitive clustering statistic.
+    """,
+    r'$w(\theta)$': r"""
+    **Angular Correlation Function $w(\theta)$**
+    Angular two-point clustering statistic.
+    Commonly used in photometric galaxy surveys.
+    """,
+    r'$\gamma_{\mathrm{t}}(\theta)$': r"""
+    **Tangential Shear $\gamma_t(\theta)$**
+    Azimuthally averaged shear profile around lens galaxies.
+    Direct observable in galaxy-galaxy lensing.
+    """,
+    r'$\xi_{+} (\theta)$': r"""
+    **Cosmic Shear Correlation $\xi_{+}(\theta)$**
+    Two-point shear correlation function (plus mode).
+    Sensitive to the projected matter power spectrum.
+    """,
+    r'$\xi_{-} (\theta)$': r"""
+    **Cosmic Shear Correlation $\xi_{-}(\theta)$**
+    Two-point shear correlation function (minus mode).
+    Complementary to $\xi_{+}$; sensitive to smaller angular scales.
+    """,
+}
+
 
 def read_markdown_file(file_path):
     with Path.open(file_path) as file:
@@ -260,7 +357,7 @@ def plot_observable(
         fig.update_yaxes(title=r'$\Phi\,[h^{3} \mathrm{dex}^{-1} \mathrm{Mpc}^{-3}]$')
     elif name == 'hmf':
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-        fig.update_yaxes(title=r'$\mathrm{d}n / \mathrm{d} \mathrm{ln} M$')
+        fig.update_yaxes(title=r'$\mathrm{d}n / \mathrm{d}M$')
     elif name == 'bias':
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
         fig.update_yaxes(title=r'$b_{h}(M)$')
@@ -376,7 +473,7 @@ def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=
 
 def compute_mass_quantity(model, quantity, components=False):
     if quantity == 'hmf':
-        return model.mass, {'tot': model.dndlnm[0, :]}
+        return model.mass, {'tot': model.dndlnm[0, :] / model.mass}
 
     if quantity == 'smf':
         fail_obs_func = np.logspace(8.0, 12.0, 300)
@@ -540,6 +637,7 @@ if __name__ == '__main__':
                 label,
                 value=label in st.session_state.selected_outputs,
                 key=f'chk_{label}',
+                help=OBSERVABLE_DESCRIPTIONS[label],
             )
             if checked:
                 selected_outputs.append(label)
@@ -1008,7 +1106,7 @@ if __name__ == '__main__':
                 )
 
     credit = read_markdown_file('credits.md')
-    with st.sidebar.popover('Acknowledgments', width='stretch'):
+    with st.sidebar.popover('Attribution', width='stretch'):
         st.markdown(credit)
 
     if 'Stellar Mass Function' in selected_outputs and hod_model != 'Cacciato':
