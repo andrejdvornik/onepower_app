@@ -56,97 +56,97 @@ OBSERVABLE_MAP = {
 
 OBSERVABLE_DESCRIPTIONS = {
     r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$': r"""
-    **Matter Power Spectrum $P_{\mathrm{mm}}(k)$**
-    The Fourier-space two-point statistic of total matter density fluctuations.
+    **Matter Power Spectrum $P_{\mathrm{mm}}(k)$**\
+    The Fourier-space two-point statistic of total matter density fluctuations.\
     Encodes the scale-dependent clustering amplitude of the matter field.
     """,
     r'Galaxy-matter Power Spectrum $P_{\mathrm{gm}}(k)$': r"""
-    **Galaxy-Matter Power Spectrum $P_{\mathrm{gm}}(k)$**
-    Cross-power spectrum between galaxies and matter.
+    **Galaxy-Matter Power Spectrum $P_{\mathrm{gm}}(k)$**\
+    Cross-power spectrum between galaxies and matter.\
     Sensitive to galaxy bias and the galaxy-halo connection.
     """,
     r'Galaxy-galaxy Power Spectrum $P_{\mathrm{gg}}(k)$': r"""
-    **Galaxy-Galaxy Power Spectrum $P_{\mathrm{gg}}(k)$**
-    Clustering of galaxies in Fourier space.
+    **Galaxy-Galaxy Power Spectrum $P_{\mathrm{gg}}(k)$**\
+    Clustering of galaxies in Fourier space.\
     Depends on cosmology and the Halo Occupation Distribution (HOD).
     """,
     r'Intrinsic-intrinsic Power Spectrum $P_{\mathrm{II}}(k)$': r"""
-    **Intrinsic-Intrinsic Power Spectrum $P_{\mathrm{II}}(k)$**
-    Auto-spectrum of intrinsic galaxy shape alignments.
+    **Intrinsic-Intrinsic Power Spectrum $P_{\mathrm{II}}(k)$**\
+    Auto-spectrum of intrinsic galaxy shape alignments.\
     Relevant for intrinsic alignment contamination in weak lensing analyses.
     """,
     r'Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$': r"""
-    **Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$**
-    Cross-correlation between galaxy positions and intrinsic shapes.
+    **Galaxy-Intrinsic Power Spectrum $P_{\mathrm{gI}}(k)$**\
+    Cross-correlation between galaxy positions and intrinsic shapes.\
     Contributes to galaxy-galaxy lensing systematics.
     """,
     r'Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$': r"""
-    **Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$**
-    Cross-correlation between matter density and intrinsic galaxy alignments.
+    **Matter-Intrinsic Power Spectrum $P_{\mathrm{mI}}(k)$**\
+    Cross-correlation between matter density and intrinsic galaxy alignments.\
     Important for modelling weak lensing systematics.
     """,
     r'Galaxy Bias $b_{\mathrm{g}}(k)$': r"""
-    **Galaxy Bias $b_{\mathrm{g}}(k)$**
-    Scale-dependent bias defined via $b_g(k)=P_{gm}(k)/P_{mm}(k)$ or related estimators.
+    **Galaxy Bias $b_{\mathrm{g}}(k)$**\
+    Scale-dependent bias defined via $b_g(k)=P_{gm}(k)/P_{mm}(k)$ or related estimators.\
     Quantifies how galaxies trace the underlying matter field.
     """,
     'Halo Mass Function': r"""
-    **Halo Mass Function (HMF)**
-    Number density of dark matter haloes as a function of mass.
+    **Halo Mass Function (HMF)**\
+    Number density of dark matter haloes as a function of mass.\
     A fundamental prediction of structure formation theory.
     """,
     'Halo Bias Function': r"""
-    **Halo Bias Function**
-    Mass-dependent clustering bias of dark matter haloes relative to matter.
+    **Halo Bias Function**\
+    Mass-dependent clustering bias of dark matter haloes relative to matter.\
     Determines how halo populations trace large-scale structure.
     """,
     'Concentration (matter)': r"""
-    **Halo Concentration (matter)**
-    Mass-concentration relation for dark matter haloes.
+    **Halo Concentration (matter)**\
+    Mass-concentration relation for dark matter haloes.\
     Controls the internal density profile of haloes.
     """,
     'Concentration (galaxies)': r"""
-    **Halo Concentration (galaxies)**
+    **Halo Concentration (galaxies)**\
     Effective concentration governing satellite galaxy distribution inside haloes.
     """,
     'Stellar Mass Function': r"""
-    **Stellar Mass Function (SMF)**
-    Number density of galaxies as a function of stellar mass.
+    **Stellar Mass Function (SMF)**\
+    Number density of galaxies as a function of stellar mass.\
     Connects cosmology to galaxy formation physics.
     """,
     'HOD': r"""
-    **Halo Occupation Distribution (HOD)**
-    Mean number of galaxies hosted by a halo of given mass.
+    **Halo Occupation Distribution (HOD)**\
+    Mean number of galaxies hosted by a halo of given mass.\
     Separates contributions from central and satellite galaxies.
     """,
     r'$\Delta \Sigma (r_{\mathrm{p}})$': r"""
-    **Excess Surface Density $\Delta \Sigma(r_p)$**
-    Projected galaxy-matter correlation measured in galaxy-galaxy lensing.
+    **Excess Surface Density $\Delta \Sigma(r_p)$**\
+    Projected galaxy-matter correlation measured in galaxy-galaxy lensing.\
     Probes the average mass distribution around galaxies.
     """,
     r'$w_{\mathrm{p}}(r_{\mathrm{p}})$': r"""
-    **Projected Correlation Function $w_p(r_p)$**
-    Line-of-sight integrated galaxy correlation function.
+    **Projected Correlation Function $w_p(r_p)$**\
+    Line-of-sight integrated galaxy correlation function.\
     Redshift-space distortion-insensitive clustering statistic.
     """,
     r'$w(\theta)$': r"""
-    **Angular Correlation Function $w(\theta)$**
-    Angular two-point clustering statistic.
+    **Angular Correlation Function $w(\theta)$**\
+    Angular two-point clustering statistic.\
     Commonly used in photometric galaxy surveys.
     """,
     r'$\gamma_{\mathrm{t}}(\theta)$': r"""
-    **Tangential Shear $\gamma_t(\theta)$**
-    Azimuthally averaged shear profile around lens galaxies.
+    **Tangential Shear $\gamma_t(\theta)$**\
+    Azimuthally averaged shear profile around lens galaxies.\
     Direct observable in galaxy-galaxy lensing.
     """,
     r'$\xi_{+} (\theta)$': r"""
-    **Cosmic Shear Correlation $\xi_{+}(\theta)$**
-    Two-point shear correlation function (plus mode).
+    **Cosmic Shear Correlation $\xi_{+}(\theta)$**\
+    Two-point shear correlation function (plus mode).\
     Sensitive to the projected matter power spectrum.
     """,
     r'$\xi_{-} (\theta)$': r"""
-    **Cosmic Shear Correlation $\xi_{-}(\theta)$**
-    Two-point shear correlation function (minus mode).
+    **Cosmic Shear Correlation $\xi_{-}(\theta)$**\
+    Two-point shear correlation function (minus mode).\
     Complementary to $\xi_{+}$; sensitive to smaller angular scales.
     """,
 }
