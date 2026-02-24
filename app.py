@@ -448,7 +448,7 @@ def plot_combined_pk(computed_outputs, selected_outputs, compare_reference):
     fig.update_layout(
         xaxis_type='log',
         xaxis_title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$',
-        yaxis_title=r'$P(k)$',
+        yaxis_title=r'$P(k)\,[(\mathrm{Mpc}/h)^3]$',
         width=700,
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
