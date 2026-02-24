@@ -1303,7 +1303,7 @@ if __name__ == '__main__':
                     for s in selected_outputs
                     if OBSERVABLE_MAP[s][0] != 'pk' or OBSERVABLE_MAP[s][1] == 'gb'
                 ]
-                combined_tab = st.tabs(['Combined Power Spectra'] + remaining_outputs)
+                combined_tab = st.tabs(['Power Spectra'] + remaining_outputs)
 
                 with combined_tab[0]:
                     fig_combined = plot_combined_pk(
