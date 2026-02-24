@@ -414,7 +414,7 @@ def plot_combined_pk(computed_outputs, selected_outputs, compare_reference):
                 mode='lines',
                 name=output,
                 line=dict(
-                    width=3 if color_index == 0 else 2,
+                    width=3,
                     color=theme['primary']
                     if color_index == 0
                     else plotly_colors[(color_index - 1) % len(plotly_colors)],
