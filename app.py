@@ -212,7 +212,7 @@ def set_plotly_theme_from_streamlit():
 
 
 def plot_observable(
-    x, y_dict, name, compare_reference, components=False, logx=True, logy=True
+    x, y_dict, subtype, compare_reference, components=False, logx=True, logy=True
 ):
 
     theme = get_streamlit_theme()
@@ -230,7 +230,7 @@ def plot_observable(
             fig.add_trace(
                 go.Scatter(
                     x=x,
-                    y=y_dict[comp] if name != 'mi' else np.abs(y_dict[comp]),
+                    y=y_dict[comp] if subtype != 'mi' else np.abs(y_dict[comp]),
                     mode='lines',
                     name=comp,
                     line=dict(color=color, width=2),
@@ -240,7 +240,7 @@ def plot_observable(
     fig.add_trace(
         go.Scatter(
             x=x,
-            y=y_dict['tot'] if name != 'mi' else np.abs(y_dict['tot']),
+            y=y_dict['tot'] if subtype != 'mi' else np.abs(y_dict['tot']),
             mode='lines',
             name='Live Model',
             line=dict(color=theme['primary'], width=3),
@@ -249,13 +249,13 @@ def plot_observable(
 
     offset = len(component_keys)
     for i, model in enumerate(st.session_state.models):
-        if name in model['outputs']:
-            x_stored, y_stored = model['outputs'][name]
+        if subtype in model['outputs']:
+            x_stored, y_stored = model['outputs'][subtype]
             color = plotly_colors[(i + offset) % len(plotly_colors)]
             fig.add_trace(
                 go.Scatter(
                     x=x_stored,
-                    y=y_stored['tot'] if name != 'mi' else np.abs(y_stored['tot']),
+                    y=y_stored['tot'] if subtype != 'mi' else np.abs(y_stored['tot']),
                     mode='lines',
                     name=f'Model {i + 1}',
                     line=dict(color=color, width=2),
@@ -264,13 +264,13 @@ def plot_observable(
 
     if compare_reference and st.session_state.reference_model is not None:
         model_ref = st.session_state.reference_model
-        if name in model_ref['outputs']:
-            x_stored, y_stored = model_ref['outputs'][name]
+        if subtype in model_ref['outputs']:
+            x_stored, y_stored = model_ref['outputs'][subtype]
             color = plotly_colors[(offset) % len(plotly_colors)]
             fig.add_trace(
                 go.Scatter(
                     x=x_stored,
-                    y=y_stored['tot'] if name != 'mi' else np.abs(y_stored['tot']),
+                    y=y_stored['tot'] if subtype != 'mi' else np.abs(y_stored['tot']),
                     mode='lines',
                     name='Reference model',
                     line=dict(color=color, width=2),
@@ -278,7 +278,7 @@ def plot_observable(
             )
 
     # ---- Axis formatting ----
-    if name in [
+    if subtype in [
         'mm',
         'gm',
         'gg',
@@ -298,12 +298,12 @@ def plot_observable(
         'xim',
     ]:
         y_range = [np.log10(np.min(y['tot']) * 0.5), np.log10(np.max(y['tot']) * 2)]
-    elif name == 'mi':
+    elif subtype == 'mi':
         y_range = [
             np.log10(np.min(np.abs(y['tot'])) * 0.5),
             np.log10(np.max(np.abs(y['tot'])) * 2),
         ]
-    elif name in ['hod']:
+    elif subtype in ['hod']:
         y_range = [
             np.max([np.log10(np.min(y['tot']) * 0.5), -3]),
             np.min([np.log10(np.max(y['tot']) * 2), 5]),
@@ -323,45 +323,45 @@ def plot_observable(
     )
 
     # ---- Scientific axis labels ----
-    if name in ['mm', 'gm', 'gg', 'ii', 'gi']:
+    if subtype in ['mm', 'gm', 'gg', 'ii', 'gi']:
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$P(k)\,[(\mathrm{Mpc}/h)^3]$')
-    elif name == 'mi':
+    elif subtype == 'mi':
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$|P(k)|\,[(\mathrm{Mpc}/h)^3]$')
-    elif name == 'gb':
+    elif subtype == 'gb':
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
         fig.update_yaxes(title=r'$b_{\mathrm{g}}(k)$')
-    elif name == 'wp':
+    elif subtype == 'wp':
         fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
         fig.update_yaxes(
             title=r'$w_{\mathrm{p}}(r_{\mathrm{p}})\,[h^{-1}\,\mathrm{Mpc}]$'
         )
-    elif name == 'ds':
+    elif subtype == 'ds':
         fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
         fig.update_yaxes(title=r'$\Delta \Sigma\,[hM_{\odot}/\mathrm{pc}^2]$')
-    elif name == 'wtheta':
+    elif subtype == 'wtheta':
         fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
         fig.update_yaxes(title=r'$w(\theta)$')
-    elif name == 'gamma':
+    elif subtype == 'gamma':
         fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
         fig.update_yaxes(title=r'$\gamma_{\mathrm{t}}(\theta)$')
-    elif name == 'xip' or name == 'xim':
+    elif subtype in ['xip', 'xim']:
         fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
         fig.update_yaxes(title=r'$\xi_{+}(\theta)$')
-    elif name == 'hod':
+    elif subtype == 'hod':
         fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
         fig.update_yaxes(title=r'$<N|M>$')
-    elif name == 'smf':
+    elif subtype == 'smf':
         fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
         fig.update_yaxes(title=r'$\Phi\,[h^{3} \mathrm{dex}^{-1} \mathrm{Mpc}^{-3}]$')
-    elif name == 'hmf':
+    elif subtype == 'hmf':
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
         fig.update_yaxes(title=r'$\mathrm{d}n / \mathrm{d}M$')
-    elif name == 'bias':
+    elif subtype == 'bias':
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
         fig.update_yaxes(title=r'$b_{h}(M)$')
-    elif name == 'conc_cen' or name == 'conc_sat':
+    elif subtype in ['conc_cen', 'conc_sat']:
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
         fig.update_yaxes(title=r'$c(M)$')
     fig.update_xaxes(exponentformat='power')
@@ -370,19 +370,84 @@ def plot_observable(
     return fig
 
 
-def plot_ratio(x, y_live, x_ref, y_ref, name, logx=True):
+def plot_combined_pk(
+    computed_outputs,
+    selected_outputs,
+    compare_reference,
+):
+    theme = get_streamlit_theme()
+    fig = go.Figure()
+
+    plotly_colors = pc.qualitative.Plotly[1:]  # skip primary
+    y_values = []
+
+    color_index = 0
+
+    for output in selected_outputs:
+        category, subtype = OBSERVABLE_MAP[output]
+        if category != 'pk':
+            continue
+        if subtype not in computed_outputs or subtype == 'gb':
+            continue
+        x, y = computed_outputs[subtype]
+        y_live = y['tot'] if subtype != 'mi' else np.abs(y['tot'])
+
+        y_values.append(y_live)
+
+        fig.add_trace(
+            go.Scatter(
+                x=x,
+                y=y_live,
+                mode='lines',
+                name=output,
+                line=dict(
+                    width=3 if color_index == 0 else 2,
+                    color=theme['primary']
+                    if color_index == 0
+                    else plotly_colors[(color_index - 1) % len(plotly_colors)],
+                ),
+            )
+        )
+
+        color_index += 1
+
+    if y_values:
+        y_all = np.concatenate(y_values)
+        y_range = [np.log10(np.min(y_all) * 0.5), np.log10(np.max(y_all) * 2)]
+        fig.update_yaxes(
+            type='log',
+            range=y_range,
+        )
+    fig.update_layout(
+        xaxis_type='log',
+        xaxis_title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$',
+        yaxis_title=r'$P(k)$',
+        width=700,
+        height=460,
+        margin=dict(l=60, r=20, t=40, b=60),
+    )
+    fig.update_traces(
+        hovertemplate='x = %{x:.3e}<br>y = %{y:.3e}<extra></extra>',
+        showlegend=True,
+    )
+    fig.update_xaxes(exponentformat='power')
+    fig.update_yaxes(exponentformat='power')
+
+    return fig
+
+
+def plot_ratio(x, y_live, x_ref, y_ref, subtype, logx=True, name=''):
     theme = get_streamlit_theme()
     y_ref = np.interp(x, x_ref, y_ref['tot'])
     ratio = ((y_live['tot'] - y_ref) / y_ref) * 100.0
 
     fig = go.Figure()
-
     fig.add_trace(
         go.Scatter(
             x=x,
             y=ratio,
             mode='lines',
-            name='(Live - Ref) / Ref',
+            name=name if name != '' else '(Live - Ref) / Ref',
             line=dict(color=theme['primary'], width=3),
         )
     )
@@ -396,15 +461,15 @@ def plot_ratio(x, y_live, x_ref, y_ref, name, logx=True):
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
     )
-    if name in ['mm', 'gm', 'gg', 'ii', 'gi', 'mi', 'gb']:
+    if subtype in ['mm', 'gm', 'gg', 'ii', 'gi', 'mi', 'gb']:
         fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-    elif name == 'wp' or name == 'ds':
+    elif subtype == 'wp' or subtype == 'ds':
         fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
-    elif name in ['wtheta', 'gamma', 'xip', 'xim']:
+    elif subtype in ['wtheta', 'gamma', 'xip', 'xim']:
         fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
-    elif name in ['hmf', 'conc_cen', 'conc_sat', 'bias']:
+    elif subtype in ['hmf', 'conc_cen', 'conc_sat', 'bias']:
         fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-    elif name in ['hod', 'smf']:
+    elif subtype in ['hod', 'smf']:
         fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
 
     # Add horizontal unity line
@@ -629,6 +694,7 @@ if __name__ == '__main__':
 
     compare_reference = st.sidebar.toggle('Compare to reference model', False)
     components = st.sidebar.toggle('Show individual halo model components', value=False)
+    combine_pk = st.sidebar.toggle('Show all power spectra on one plot', value=False)
 
     with st.sidebar.expander('Quantities', expanded=True):
         selected_outputs = []
@@ -1208,8 +1274,64 @@ if __name__ == '__main__':
 
         selected_outputs = st.session_state.selected_outputs
         if not no_selection:
-            tabs = st.tabs(selected_outputs, width='stretch')
-            for tab, output in zip(tabs, selected_outputs):
+            # tabs = st.tabs(selected_outputs, width='stretch')
+            # for tab, output in zip(tabs, selected_outputs):
+            # If combining PK spectra, show a dedicated combined tab
+            if combine_pk and any(
+                OBSERVABLE_MAP[o][0] == 'pk' for o in selected_outputs
+            ):
+                remaining_outputs = [
+                    s
+                    for s in selected_outputs
+                    if OBSERVABLE_MAP[s][0] != 'pk' or OBSERVABLE_MAP[s][1] == 'gb'
+                ]
+                combined_tab = st.tabs(['Combined Power Spectra'] + remaining_outputs)
+
+                # First tab = combined plot
+                with combined_tab[0]:
+                    fig_combined = plot_combined_pk(
+                        computed_outputs,
+                        selected_outputs,
+                        compare_reference,
+                    )
+                    st.plotly_chart(
+                        fig_combined,
+                        width='content',
+                        height='content',
+                        key='fig_combinded',
+                    )
+
+                    for output in selected_outputs:
+                        category, subtype = OBSERVABLE_MAP[output]
+                        if category != 'pk':
+                            continue
+                        if subtype not in computed_outputs or subtype == 'gb':
+                            continue
+                        if (
+                            compare_reference
+                            and st.session_state.reference_model is not None
+                        ):
+                            x, y = computed_outputs[subtype]
+                            x_ref, y_ref = st.session_state.reference_model['outputs'][
+                                subtype
+                            ]
+                            fig_ratio = plot_ratio(
+                                x, y, x_ref, y_ref, subtype, name=output
+                            )
+                            st.plotly_chart(
+                                fig_ratio,
+                                width='content',
+                                height='content',
+                                key=f'fig_{output}_ref',
+                            )
+
+                # Remaining tabs = individual plots
+                individual_tabs = combined_tab[1:]
+                selected_outputs = remaining_outputs
+            else:
+                individual_tabs = st.tabs(selected_outputs, width='stretch')
+
+            for tab, output in zip(individual_tabs, selected_outputs):
                 with tab:
                     category, subtype = OBSERVABLE_MAP[output]
                     if subtype in [
