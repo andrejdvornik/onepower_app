@@ -49,12 +49,29 @@ LOADING_MESSAGES = [
     r'Whispering to $\sigma_8$... it changes everything...',
     r'The Fellowship is integrating over $M_{h}$...',
     r'Adjusting $\Omega_{\mathrm{c}}$... carefully...',
+    'Consulting the Eldar of Rivendell for cosmological advice...',
+    'Unraveling the cosmic web with Mithril threads...',
+    'Invoking the Valar to bless the halo model...',
+    'Balancing the baryon budget with elven precision...',
+    'Simulating the universe in the forges of Khazad-dûm...',
+    'Waiting for the cosmic variance to settle...',
+    'Tuning the spectral index with the harp of the Ainur...',
+    'Fitting the halo occupation distribution with elven craftsmanship...',
+    'Extracting the dark energy from the darkness of Morgoth...',
+    'Aligning the galaxies with the Music of the Ainur...',
 ]
 
 ERROR_MESSAGES = {
     'compute_fail': '🔥 A Balrog has disrupted the halo model. Please check your parameters and try again.',
     'param_inconsistent': 'The set min and max parameters are inconsistent.',
     'numerical': '🌊 The cosmic web trembles... numerical instability detected. Adjust parameters and try again.',
+}
+
+WARNINGS = {
+    'redshift': 'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model! Moreover, it is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+    'projection': 'The {output} function is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+    'IA': 'The IA parameters are currently fixed, but they will be included in future updates of the app. The only option that is currently available is to show the fixed IA power spectra, using Fortuna et al. 2021 model.',
+    'SMF': 'The Stellar Mass Function cannot be computed with the {hod_model} HOD model, since it does not include an explicit observable-mass relation. Please switch to the Cacciato HOD model to compute the SMF.',
 }
 
 # Observable mappings and descriptions
@@ -1176,7 +1193,7 @@ if __name__ == '__main__':
 
             with st.sidebar.expander('IA Parameters', expanded=False):
                 st.warning(
-                    'The IA parameters are currently fixed, but they will be included in future updates of the app. The only option that is currently available is to show the fixed IA power spectra, using Fortuna et al. 2021 model.',
+                    WARNINGS['IA'],
                     icon='⚠️',
                 )
 
@@ -1186,7 +1203,7 @@ if __name__ == '__main__':
 
     if 'Stellar Mass Function' in selected_outputs and hod_model != 'Cacciato':
         st.warning(
-            f'The Stellar Mass Function cannot be computed with the {hod_model} HOD model, since it does not include an explicit observable-mass relation. Please switch to the Cacciato HOD model to compute the SMF.',
+            WARNINGS['SMF'].format(hod_model=hod_model),
             icon='⚠️',
             width=500,
         )
@@ -1336,13 +1353,13 @@ if __name__ == '__main__':
                     if subtype in ['wtheta', 'gamma', 'xip', 'xim']:
                         if params['z_vec'][0] == 0.0:
                             st.warning(
-                                f'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model! Moreover, it is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+                                WARNINGS['redshift'].format(output=output),
                                 icon='⚠️',
                                 width=700,
                             )
                         else:
                             st.warning(
-                                f'The {output} function is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
+                                WARNINGS['projection'].format(output=output),
                                 icon='⚠️',
                                 width=700,
                             )
