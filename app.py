@@ -1320,9 +1320,11 @@ if __name__ == '__main__':
 
                     for output in selected_outputs:
                         category, subtype = OBSERVABLE_MAP[output]
-                        if category != 'pk':
-                            continue
-                        if subtype not in computed_outputs or subtype == 'gb':
+                        if (
+                            category != 'pk'
+                            or subtype not in computed_outputs
+                            or subtype == 'gb'
+                        ):
                             continue
                         if (
                             compare_reference
