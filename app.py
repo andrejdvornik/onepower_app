@@ -1,13 +1,15 @@
-import streamlit as st
-import numpy as np
 import io
+import json
 import random
+from pathlib import Path
+import hashlib
+
+import numpy as np
+import streamlit as st
 import plotly.graph_objects as go
 import plotly.colors as pc
 import plotly.io as pio
-from pathlib import Path
-import hashlib
-import json
+
 from onepower import Spectra
 from pk_to_real import PkTransformer
 
@@ -15,6 +17,29 @@ with Path.open('load_mathjax.js') as f:
     js = f.read()
     st.components.v1.html(f'<script>{js}</script>', height=0)
 
+
+# Constants for default values
+DEFAULT_KMIN = 1e-3
+DEFAULT_KMAX = 10.0
+DEFAULT_NK = 300
+DEFAULT_MMIN = 9.0
+DEFAULT_MMAX = 15.0
+DEFAULT_RPMIN = 0.1
+DEFAULT_RPMAX = 20.0
+DEFAULT_THETAMIN = 0.5
+DEFAULT_THETAMAX = 200.0
+DEFAULT_Z_VEC = 0.0
+DEFAULT_OMEGA_C = 0.25
+DEFAULT_OMEGA_B = 0.05
+DEFAULT_H = 0.7
+DEFAULT_NS = 0.9
+DEFAULT_SIGMA_8 = 0.8
+DEFAULT_M_NU = 0.06
+DEFAULT_W0 = -1.0
+DEFAULT_WA = 0.0
+DEFAULT_TCMB = 2.7255
+
+# Loading messages and error messages
 LOADING_MESSAGES = [
     'Consulting the Palantír of Power Spectra...',
     'Summoning the haloes from the cosmic web...',
@@ -32,6 +57,7 @@ ERROR_MESSAGES = {
     'numerical': '🌊 The cosmic web trembles... numerical instability detected. Adjust parameters and try again.',
 }
 
+# Observable mappings and descriptions
 OBSERVABLE_MAP = {
     r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$': ('pk', 'mm'),
     r'Galaxy-matter Power Spectrum $P_{\mathrm{gm}}(k)$': ('pk', 'gm'),
@@ -211,15 +237,45 @@ def set_plotly_theme_from_streamlit():
     pio.templates.default = 'streamlit_matplotlib'
 
 
+def _get_axis_labels(subtype):
+    axis_labels = {
+        'mm': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$P(k)\,[(\mathrm{Mpc}/h)^3]$'),
+        'gm': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$P(k)\,[(\mathrm{Mpc}/h)^3]$'),
+        'gg': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$P(k)\,[(\mathrm{Mpc}/h)^3]$'),
+        'ii': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$P(k)\,[(\mathrm{Mpc}/h)^3]$'),
+        'gi': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$P(k)\,[(\mathrm{Mpc}/h)^3]$'),
+        'mi': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$|P(k)|\,[(\mathrm{Mpc}/h)^3]$'),
+        'gb': (r'$k\,[h\,\mathrm{Mpc}^{-1}]$', r'$b_{\mathrm{g}}(k)$'),
+        'wp': (
+            r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$',
+            r'$w_{\mathrm{p}}(r_{\mathrm{p}})\,[h^{-1}\,\mathrm{Mpc}]$',
+        ),
+        'ds': (
+            r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$',
+            r'$\Delta \Sigma\,[hM_{\odot}/\mathrm{pc}^2]$',
+        ),
+        'wtheta': (r'$\theta\,[\mathrm{arcmin}]$', r'$w(\theta)$'),
+        'gamma': (r'$\theta\,[\mathrm{arcmin}]$', r'$\gamma_{\mathrm{t}}(\theta)$'),
+        'xip': (r'$\theta\,[\mathrm{arcmin}]$', r'$\xi_{+}(\theta)$'),
+        'xim': (r'$\theta\,[\mathrm{arcmin}]$', r'$\xi_{-}(\theta)$'),
+        'hod': (r'$M^{*}\,[h^{-2}M_{\odot}]$', r'$<N|M>$'),
+        'smf': (
+            r'$M^{*}\,[h^{-2}M_{\odot}]$',
+            r'$\Phi\,[h^{3} \mathrm{dex}^{-1} \mathrm{Mpc}^{-3}]$',
+        ),
+        'hmf': (r'$M_{h}\,[h^{-1}M_{\odot}]$', r'$\mathrm{d}n / \mathrm{d}M$'),
+        'bias': (r'$M_{h}\,[h^{-1}M_{\odot}]$', r'$b_{h}(M)$'),
+        'conc_cen': (r'$M_{h}\,[h^{-1}M_{\odot}]$', r'$c(M)$'),
+        'conc_sat': (r'$M_{h}\,[h^{-1}M_{\odot}]$', r'$c(M)$'),
+    }
+    return axis_labels.get(subtype, (r'$x$', r'$y$'))
+
+
 def plot_observable(
     x, y_dict, subtype, compare_reference, components=False, logx=True, logy=True
 ):
-
     theme = get_streamlit_theme()
-
     fig = go.Figure()
-
-    # Plotly default palette (skip first color)
     plotly_colors = pc.qualitative.Plotly[1:]
 
     component_keys = [k for k in y_dict if k != 'tot']
@@ -277,7 +333,7 @@ def plot_observable(
                 )
             )
 
-    # ---- Axis formatting ----
+    # Axis formatting
     if subtype in [
         'mm',
         'gm',
@@ -297,17 +353,21 @@ def plot_observable(
         'xip',
         'xim',
     ]:
-        y_range = [np.log10(np.min(y['tot']) * 0.5), np.log10(np.max(y['tot']) * 2)]
+        y_range = [
+            np.log10(np.min(y_dict['tot']) * 0.5),
+            np.log10(np.max(y_dict['tot']) * 2),
+        ]
     elif subtype == 'mi':
         y_range = [
-            np.log10(np.min(np.abs(y['tot'])) * 0.5),
-            np.log10(np.max(np.abs(y['tot'])) * 2),
+            np.log10(np.min(np.abs(y_dict['tot'])) * 0.5),
+            np.log10(np.max(np.abs(y_dict['tot'])) * 2),
         ]
     elif subtype in ['hod']:
         y_range = [
-            np.max([np.log10(np.min(y['tot']) * 0.5), -3]),
-            np.min([np.log10(np.max(y['tot']) * 2), 5]),
+            np.max([np.log10(np.min(y_dict['tot']) * 0.5), -3]),
+            np.min([np.log10(np.max(y_dict['tot']) * 2), 5]),
         ]
+
     fig.update_layout(
         xaxis_type='log' if logx else 'linear',
         yaxis_type='log' if logy else 'linear',
@@ -315,83 +375,36 @@ def plot_observable(
         width=700,
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
-        # font=dict(family="STIXGeneral")
     )
+
+    x_label, y_label = _get_axis_labels(subtype)
+    fig.update_xaxes(title=x_label)
+    fig.update_yaxes(title=y_label)
+
     fig.update_traces(
         hovertemplate='x = %{x:.3e}<br>y = %{y:.3e}<extra></extra>',
         showlegend=True,
     )
-
-    # ---- Scientific axis labels ----
-    if subtype in ['mm', 'gm', 'gg', 'ii', 'gi']:
-        fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-        fig.update_yaxes(title=r'$P(k)\,[(\mathrm{Mpc}/h)^3]$')
-    elif subtype == 'mi':
-        fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-        fig.update_yaxes(title=r'$|P(k)|\,[(\mathrm{Mpc}/h)^3]$')
-    elif subtype == 'gb':
-        fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-        fig.update_yaxes(title=r'$b_{\mathrm{g}}(k)$')
-    elif subtype == 'wp':
-        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
-        fig.update_yaxes(
-            title=r'$w_{\mathrm{p}}(r_{\mathrm{p}})\,[h^{-1}\,\mathrm{Mpc}]$'
-        )
-    elif subtype == 'ds':
-        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
-        fig.update_yaxes(title=r'$\Delta \Sigma\,[hM_{\odot}/\mathrm{pc}^2]$')
-    elif subtype == 'wtheta':
-        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
-        fig.update_yaxes(title=r'$w(\theta)$')
-    elif subtype == 'gamma':
-        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
-        fig.update_yaxes(title=r'$\gamma_{\mathrm{t}}(\theta)$')
-    elif subtype in ['xip', 'xim']:
-        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
-        fig.update_yaxes(title=r'$\xi_{+}(\theta)$')
-    elif subtype == 'hod':
-        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
-        fig.update_yaxes(title=r'$<N|M>$')
-    elif subtype == 'smf':
-        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
-        fig.update_yaxes(title=r'$\Phi\,[h^{3} \mathrm{dex}^{-1} \mathrm{Mpc}^{-3}]$')
-    elif subtype == 'hmf':
-        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-        fig.update_yaxes(title=r'$\mathrm{d}n / \mathrm{d}M$')
-    elif subtype == 'bias':
-        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-        fig.update_yaxes(title=r'$b_{h}(M)$')
-    elif subtype in ['conc_cen', 'conc_sat']:
-        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-        fig.update_yaxes(title=r'$c(M)$')
     fig.update_xaxes(exponentformat='power')
     fig.update_yaxes(exponentformat='power')
 
     return fig
 
 
-def plot_combined_pk(
-    computed_outputs,
-    selected_outputs,
-    compare_reference,
-):
+def plot_combined_pk(computed_outputs, selected_outputs, compare_reference):
     theme = get_streamlit_theme()
     fig = go.Figure()
-
-    plotly_colors = pc.qualitative.Plotly[1:]  # skip primary
+    plotly_colors = pc.qualitative.Plotly[1:]
     y_values = []
-
     color_index = 0
 
     for output in selected_outputs:
         category, subtype = OBSERVABLE_MAP[output]
-        if category != 'pk':
+        if category != 'pk' or subtype not in computed_outputs or subtype == 'gb':
             continue
-        if subtype not in computed_outputs or subtype == 'gb':
-            continue
+
         x, y = computed_outputs[subtype]
         y_live = y['tot'] if subtype != 'mi' else np.abs(y['tot'])
-
         y_values.append(y_live)
 
         fig.add_trace(
@@ -408,16 +421,13 @@ def plot_combined_pk(
                 ),
             )
         )
-
         color_index += 1
 
     if y_values:
         y_all = np.concatenate(y_values)
         y_range = [np.log10(np.min(y_all) * 0.5), np.log10(np.max(y_all) * 2)]
-        fig.update_yaxes(
-            type='log',
-            range=y_range,
-        )
+        fig.update_yaxes(type='log', range=y_range)
+
     fig.update_layout(
         xaxis_type='log',
         xaxis_title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$',
@@ -426,6 +436,7 @@ def plot_combined_pk(
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
     )
+
     fig.update_traces(
         hovertemplate='x = %{x:.3e}<br>y = %{y:.3e}<extra></extra>',
         showlegend=True,
@@ -438,8 +449,8 @@ def plot_combined_pk(
 
 def plot_ratio(x, y_live, x_ref, y_ref, subtype, logx=True, name=''):
     theme = get_streamlit_theme()
-    y_ref = np.interp(x, x_ref, y_ref['tot'])
-    ratio = ((y_live['tot'] - y_ref) / y_ref) * 100.0
+    y_ref_interp = np.interp(x, x_ref, y_ref['tot'])
+    ratio = ((y_live['tot'] - y_ref_interp) / y_ref_interp) * 100.0
 
     fig = go.Figure()
     fig.add_trace(
@@ -461,20 +472,11 @@ def plot_ratio(x, y_live, x_ref, y_ref, subtype, logx=True, name=''):
         height=460,
         margin=dict(l=60, r=20, t=40, b=60),
     )
-    if subtype in ['mm', 'gm', 'gg', 'ii', 'gi', 'mi', 'gb']:
-        fig.update_xaxes(title=r'$k\,[h\,\mathrm{Mpc}^{-1}]$')
-    elif subtype == 'wp' or subtype == 'ds':
-        fig.update_xaxes(title=r'$r_{\mathrm{p}}\,[h^{-1}\,\mathrm{Mpc}]$')
-    elif subtype in ['wtheta', 'gamma', 'xip', 'xim']:
-        fig.update_xaxes(title=r'$\theta\,[\mathrm{arcmin}]$')
-    elif subtype in ['hmf', 'conc_cen', 'conc_sat', 'bias']:
-        fig.update_xaxes(title=r'$M_{h}\,[h^{-1}M_{\odot}]$')
-    elif subtype in ['hod', 'smf']:
-        fig.update_xaxes(title=r'$M^{*}\,[h^{-2}M_{\odot}]$')
 
-    # Add horizontal unity line
+    x_label, _ = _get_axis_labels(subtype)
+    fig.update_xaxes(title=x_label)
+
     fig.add_hline(y=0.0, line_width=1)
-
     fig.update_traces(
         hovertemplate='x = %{x:.3e}<br>y = %{y:.3e}<extra></extra>',
         showlegend=True,
@@ -496,8 +498,8 @@ def compute_power_spectrum(model, spectrum_type, components=False):
     }
 
     ps = getattr(model, ps_attr[spectrum_type])
-
     k = model.k_vec
+
     if spectrum_type == 'gb':
         return k, {'tot': ps.galaxy_linear_bias[0, 0, :]}
 
@@ -521,6 +523,7 @@ def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=
     else:
         sep_min_in = None
         sep_max_in = None
+
     transformer = PkTransformer(
         corr_type,
         model,
@@ -528,6 +531,7 @@ def compute_proj(model, corr_type, rpmin, rpmax, thetamin, thetamax, components=
         sep_max_in=sep_max_in,
         components=components,
     )
+
     if components:
         sep, xi, xi_1h, xi_2h = transformer()
         return sep, {'tot': xi, '1h': xi_1h, '2h': xi_2h}
@@ -598,14 +602,10 @@ def hash_params(params):
 
 @st.cache_resource(show_spinner=False, ttl=1800)
 def compute_outputs(params, components=True):
-    rpmin = params['rpmin']
-    rpmax = params['rpmax']
-    thetamin = params['thetamin']
-    thetamax = params['thetamax']
-    del params['rpmin']
-    del params['rpmax']
-    del params['thetamin']
-    del params['thetamax']
+    rpmin = params.pop('rpmin')
+    rpmax = params.pop('rpmax')
+    thetamin = params.pop('thetamin')
+    thetamax = params.pop('thetamax')
 
     st.session_state.init_model.update(**params)
     model = st.session_state.init_model
@@ -615,18 +615,21 @@ def compute_outputs(params, components=True):
         category, subtype = OBSERVABLE_MAP[output]
         if category == 'pk':
             x, y = compute_power_spectrum(model, subtype, components)
-            computed_outputs[subtype] = (x, y)
         elif category == 'mass':
             x, y = compute_mass_quantity(model, subtype, components)
-            computed_outputs[subtype] = (x, y)
         elif category == 'proj':
             x, y = compute_proj(
                 model, subtype, rpmin, rpmax, thetamin, thetamax, components
             )
-            computed_outputs[subtype] = (x, y)
+        else:
+            continue
+
+        computed_outputs[subtype] = (x, y)
+
         for item in y.values():
             if check_numerical(item):
                 st.warning(ERROR_MESSAGES['numerical'])
+
     return computed_outputs
 
 
@@ -640,7 +643,6 @@ def check_numerical(array):
 
 if __name__ == '__main__':
     set_plotly_theme_from_streamlit()
-
     st.set_page_config(layout='wide', page_title='OnePower Explorer')
 
     st.image(
@@ -649,27 +651,19 @@ if __name__ == '__main__':
     )
     st.title('The OnePower Explorer')
     st.text('The One App to Explore the Halo Model and its Predictions.')
-    # st.divider()
 
-    # --------------------------
     # Session state for models
-    # --------------------------
     st.session_state.init_model = Spectra()
     if 'models' not in st.session_state:
         st.session_state.models = []
-
     if 'reference_model' not in st.session_state:
         st.session_state.reference_model = None
-
     if 'computed_outputs' not in st.session_state:
         st.session_state.computed_outputs = None
-
     if 'has_run' not in st.session_state:
         st.session_state.has_run = False
-
     if 'params_hash' not in st.session_state:
         st.session_state.params_hash = None
-
     if 'selected_outputs' not in st.session_state:
         st.session_state.selected_outputs = [
             r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$'
@@ -714,75 +708,90 @@ if __name__ == '__main__':
         st.error('Please select at least one observable to compute.', icon='⚠️')
 
     with st.form('parameter_form', width=500):
-        run_model = st.form_submit_button(
-            '🚀 Run model',
-            width='stretch',
-        )
+        run_model = st.form_submit_button('🚀 Run model', width='stretch')
+
         with st.sidebar:
             with st.sidebar.expander('General settings', expanded=False):
                 kmin = st.number_input(
                     r'$k_{\mathrm{min}}\,[h\,\mathrm{Mpc}^{-1}]$',
-                    value=1e-3,
+                    value=DEFAULT_KMIN,
                     format='%.4e',
                 )
                 kmax = st.number_input(
-                    r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=10.0
+                    r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=DEFAULT_KMAX
                 )
                 if kmin >= kmax:
                     st.error(ERROR_MESSAGES['param_inconsistent'])
                     st.stop()
-                nk = st.number_input(r'Number of $k$ points', 10, 1000, 300)
+                nk = st.number_input(r'Number of $k$ points', 10, 1000, DEFAULT_NK)
                 k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
 
                 mmin = st.number_input(
-                    r'$M_{h,\mathrm{min}}\,[h^{-1}\,M_{\odot}]$', value=9.0
+                    r'$M_{h,\mathrm{min}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMIN
                 )
                 mmax = st.number_input(
-                    r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=15.0
+                    r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMAX
                 )
-                # nm = st.number_input("Number of M points", 10, 1000, 300)
                 if mmin >= mmax:
                     st.error(ERROR_MESSAGES['param_inconsistent'])
                     st.stop()
 
                 rpmin = st.number_input(
-                    r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$', value=0.1
+                    r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$',
+                    value=DEFAULT_RPMIN,
                 )
                 rpmax = st.number_input(
-                    r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$', value=20.0
+                    r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$',
+                    value=DEFAULT_RPMAX,
                 )
                 if rpmin >= rpmax:
                     st.error(ERROR_MESSAGES['param_inconsistent'])
                     st.stop()
 
                 thetamin = st.number_input(
-                    r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$', value=0.5
+                    r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$',
+                    value=DEFAULT_THETAMIN,
                 )
                 thetamax = st.number_input(
-                    r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$', value=200.0
+                    r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$',
+                    value=DEFAULT_THETAMAX,
                 )
                 if thetamin >= thetamax:
                     st.error(ERROR_MESSAGES['param_inconsistent'])
                     st.stop()
 
             with st.sidebar.expander('Cosmological Parameters', expanded=False):
-                omega_c = st.number_input(r'$\Omega_{c}$', 0.1, 0.5, 0.25, 0.01)
-                omega_b = st.number_input(r'$\Omega_{b}$', 0.02, 0.08, 0.05, 0.005)
-                h = st.number_input(r'$h$', 0.5, 0.9, 0.7, 0.01)
-                ns = st.number_input(r'$n_s$', 0.8, 1.2, 0.9, 0.005)
-                sigma_8 = st.number_input(r'$\sigma_8$', 0.6, 1.0, 0.8, 0.01)
-                z_vec = st.number_input(r'Redshift $z$', 0.0, 2.0, 0.0, 0.1)
+                omega_c = st.number_input(
+                    r'$\Omega_{c}$', 0.1, 0.5, DEFAULT_OMEGA_C, 0.01
+                )
+                omega_b = st.number_input(
+                    r'$\Omega_{b}$', 0.02, 0.08, DEFAULT_OMEGA_B, 0.005
+                )
+                h = st.number_input(r'$h$', 0.5, 0.9, DEFAULT_H, 0.01)
+                ns = st.number_input(r'$n_s$', 0.8, 1.2, DEFAULT_NS, 0.005)
+                sigma_8 = st.number_input(
+                    r'$\sigma_8$', 0.6, 1.0, DEFAULT_SIGMA_8, 0.01
+                )
+                z_vec = st.number_input(r'Redshift $z$', 0.0, 2.0, DEFAULT_Z_VEC, 0.1)
                 m_nu = st.number_input(
-                    r'Sum of Neutrino Masses $m_{\nu} [eV]$', 0.0, 1.0, 0.06, 0.01
+                    r'Sum of Neutrino Masses $m_{\nu} [eV]$',
+                    0.0,
+                    1.0,
+                    DEFAULT_M_NU,
+                    0.01,
                 )
                 w0 = st.number_input(
-                    r'Dark Energy Equation of State $w_0$', -1.5, -0.5, -1.0, 0.05
+                    r'Dark Energy Equation of State $w_0$', -1.5, -0.5, DEFAULT_W0, 0.05
                 )
                 wa = st.number_input(
-                    r'Dark Energy Equation of State $w_a$', 0.0, 1.0, 0.0, 0.05
+                    r'Dark Energy Equation of State $w_a$', 0.0, 1.0, DEFAULT_WA, 0.05
                 )
                 tcmb = st.number_input(
-                    r'CMB Temperature $T_{\mathrm{cmb}} [K]$', 2.0, 3.0, 2.7255, 0.01
+                    r'CMB Temperature $T_{\mathrm{cmb}} [K]$',
+                    2.0,
+                    3.0,
+                    DEFAULT_TCMB,
+                    0.01,
                 )
 
             with st.sidebar.expander('Halo Model Parameters', expanded=False):
@@ -1167,7 +1176,7 @@ if __name__ == '__main__':
 
             with st.sidebar.expander('IA Parameters', expanded=False):
                 st.warning(
-                    'The IA parameters are currently fixed, but they will be included in future updates of the app. The only option that is currently avaiable is to show the fixed     IA  power spectra, using Fortuna et al. 2021 model.',
+                    'The IA parameters are currently fixed, but they will be included in future updates of the app. The only option that is currently available is to show the fixed IA power spectra, using Fortuna et al. 2021 model.',
                     icon='⚠️',
                 )
 
@@ -1228,20 +1237,15 @@ if __name__ == '__main__':
         'thetamin': thetamin,
         'thetamax': thetamax,
     }
-    current_hash = hash_params(params)
-    # --------------------------
-    # Compute Current Model
-    # --------------------------
-    should_run = run_model or not st.session_state.has_run
 
+    current_hash = hash_params(params)
+
+    should_run = run_model or not st.session_state.has_run
     params_changed = current_hash != st.session_state.params_hash
 
     if should_run and params_changed and not no_selection:
         loading_message = random.choice(LOADING_MESSAGES)
-        with st.spinner(
-            loading_message,
-            show_time=True,
-        ):
+        with st.spinner(loading_message, show_time=True):
             try:
                 st.session_state.computed_outputs = compute_outputs(params)
             except Exception as e:
@@ -1256,9 +1260,6 @@ if __name__ == '__main__':
     computed_outputs = st.session_state.get('computed_outputs', None)
     if computed_outputs is not None:
         col1, col2 = st.columns(2, width=500)
-        # --------------------------
-        # Save Model Button
-        # --------------------------
         if col1.button('Add current model for comparison', width='stretch'):
             st.session_state.models.append(
                 {'params': params.copy(), 'outputs': computed_outputs.copy()}
@@ -1287,7 +1288,6 @@ if __name__ == '__main__':
                 ]
                 combined_tab = st.tabs(['Combined Power Spectra'] + remaining_outputs)
 
-                # First tab = combined plot
                 with combined_tab[0]:
                     fig_combined = plot_combined_pk(
                         computed_outputs,
@@ -1298,7 +1298,7 @@ if __name__ == '__main__':
                         fig_combined,
                         width='content',
                         height='content',
-                        key='fig_combinded',
+                        key='fig_combined',
                     )
 
                     for output in selected_outputs:
@@ -1325,7 +1325,6 @@ if __name__ == '__main__':
                                 key=f'fig_{output}_ref',
                             )
 
-                # Remaining tabs = individual plots
                 individual_tabs = combined_tab[1:]
                 selected_outputs = remaining_outputs
             else:
@@ -1334,12 +1333,7 @@ if __name__ == '__main__':
             for tab, output in zip(individual_tabs, selected_outputs):
                 with tab:
                     category, subtype = OBSERVABLE_MAP[output]
-                    if subtype in [
-                        'wtheta',
-                        'gamma',
-                        'xip',
-                        'xim',
-                    ]:
+                    if subtype in ['wtheta', 'gamma', 'xip', 'xim']:
                         if params['z_vec'][0] == 0.0:
                             st.warning(
                                 f'The {output} function is not very well defined at redshift $z = 0$, select a higher redshift and re-run the model! Moreover, it is evaluated at a single redshift with highly simplified projection, thus can only serve as an illustrative example!',
@@ -1380,10 +1374,7 @@ if __name__ == '__main__':
                                 key=f'fig_{output}_ref',
                             )
 
-                        # CSV download
-                        # Create an in-memory buffer
                         with io.BytesIO() as buffer:
-                            # Write array to buffer
                             np.savetxt(
                                 buffer,
                                 np.column_stack((x, y['tot'])),
