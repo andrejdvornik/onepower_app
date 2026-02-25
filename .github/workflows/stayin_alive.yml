@@ -12,4 +12,10 @@ jobs:
     steps:
       - name: Ping Streamlit App
         run: |
-          curl -I https://onepower.streamlit.app
+          curl --fail \
+               --silent \
+               --show-error \
+               --retry 3 \
+               --retry-delay 10 \
+               --max-time 60 \
+               "https://onepower.streamlit.app"
