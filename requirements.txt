@@ -1,0 +1,10 @@
+streamlit
+starlette
+a2wsgi
+uvicorn[standard]
+itsdangerous
+plotly
+halomod @ git+https://github.com/halomod/halomod.git@main
+onepower>=0.7.0
+pre-commit
+mathjax

@@ -1,39 +1,41 @@
 [server]
 enableStaticServing = true
+useStarlette = true
+baseUrlPath = "onepower"
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter_18pt-Regular.ttf"
+url = "./static/Inter_18pt-Regular.ttf"
 style = "normal"
 weight = 400
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter_18pt-Medium.ttf"
+url = "./static/Inter_18pt-Medium.ttf"
 style = "normal"
 weight = 500
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter_18pt-SemiBold.ttf"
+url = "./static/Inter_18pt-SemiBold.ttf"
 style = "normal"
 weight = 600
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter_18pt-Bold.ttf"
+url = "./static/Inter_18pt-Bold.ttf"
 style = "normal"
 weight = 700
 
 [[theme.fontFaces]]
 family = "JetBrainsMono"
-url = "app/static/JetBrainsMono-Regular.ttf"
+url = "./static/JetBrainsMono-Regular.ttf"
 style = "normal"
 weight = 400
 
 [[theme.fontFaces]]
 family = "JetBrainsMono"
-url = "app/static/JetBrainsMono-Medium.ttf"
+url = "./static/JetBrainsMono-Medium.ttf"
 style = "normal"
 weight = 500
 

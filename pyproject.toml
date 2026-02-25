@@ -17,6 +17,10 @@ license = "MIT"
 requires-python = ">=3.10, <3.13"
 dependencies = [
     "streamlit",
+    "starlette",
+    "a2wsgi",
+    "uvicorn[standard]",
+    "itsdangerous",
     "plotly",
     "halomod @ git+https://github.com/halomod/halomod.git@main",
     "onepower>=0.7.0",
