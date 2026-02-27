@@ -13,6 +13,10 @@
 
 OnePower is a Python package for computing power spectra and one-point statistics using the halo model framework. It is designed for studying the galaxy-matter connection, cosmological structure formation, and intrinsic alignments, especially in the non-linear regime. This is a Web app access to explore the OnePower.
 
+## Access to OnePower Explorer
+
+📦 [OnePower Explorer](https://onepower.dvrnk.si)
+
 ## Access to OnePower
 
 📦 [View on GitHub](https://github.com/KiDS-WL/onepower)
