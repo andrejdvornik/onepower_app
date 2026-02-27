@@ -4,9 +4,9 @@
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
 
 <picture>
-	<source media="(prefers-color-scheme: dark)" srcset="https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_white_merged.png">
-  <source media="(prefers-color-scheme: light)" srcset="https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png">
-	<img align="left" alt="i" src="https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png">
+	<source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/andrejdvornik/onepower_app/main/images/logosmall_white_merged.png">
+  <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/andrejdvornik/onepower_app/main/images/logosmall_black_merged.png">
+	<img align="left" alt="i" src="https://raw.githubusercontent.com/andrejdvornik/onepower_app/main/images/logosmall_black_merged.png">
 </picture>
 
 *<p align="center"> The One App to Explore the Halo Model and its Predictions. </p>*
