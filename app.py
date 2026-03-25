@@ -660,7 +660,7 @@ def check_numerical(array):
 
 def save_model_csv(x, y, subtype, components=False):
     if components:
-        header = 'x, ' + ', '.join(y.keys())
+        header = f'x, {", ".join(y.keys())}'
         data_out = np.column_stack((x, *y.values()))
     else:
         header = 'x, tot'
