@@ -658,6 +658,28 @@ def check_numerical(array):
     return False
 
 
+def save_model_csv(x, y, subtype, components=False):
+    if components:
+        header = f'x, {", ".join(y.keys())}'
+        data_out = np.column_stack((x, *y.values()))
+    else:
+        header = 'x, tot'
+        data_out = np.column_stack((x, y['tot']))
+    with io.BytesIO() as buffer:
+        np.savetxt(
+            buffer,
+            data_out,
+            delimiter=',',
+            header=header,
+        )
+        st.download_button(
+            label='Download data as CSV',
+            data=buffer,
+            file_name=f'{subtype}.csv',
+            mime='text/csv',
+        )
+
+
 if __name__ == '__main__':
     set_plotly_theme_from_streamlit()
     st.set_page_config(layout='wide', page_title='OnePower Explorer')
@@ -1392,17 +1414,4 @@ if __name__ == '__main__':
                                 height='content',
                                 key=f'fig_{output}_ref',
                             )
-
-                        with io.BytesIO() as buffer:
-                            np.savetxt(
-                                buffer,
-                                np.column_stack((x, y['tot'])),
-                                delimiter=',',
-                                header='x, y axis',
-                            )
-                            st.download_button(
-                                label='Download data as CSV',
-                                data=buffer,
-                                file_name=f'{subtype}.csv',
-                                mime='text/csv',
-                            )
+                        save_model_csv(x, y, subtype, components=components)
