@@ -1392,13 +1392,18 @@ if __name__ == '__main__':
                                 height='content',
                                 key=f'fig_{output}_ref',
                             )
-
+                        if components:
+                            header = 'x, ' + ', '.join(y.keys())
+                            data_out = np.column_stack((x, *y.values()))
+                        else:
+                            header = 'x, tot'
+                            data_out = np.column_stack((x, y['tot']))
                         with io.BytesIO() as buffer:
                             np.savetxt(
                                 buffer,
-                                np.column_stack((x, y['tot'])),
+                                data_out,
                                 delimiter=',',
-                                header='x, y axis',
+                                header=header,
                             )
                             st.download_button(
                                 label='Download data as CSV',
