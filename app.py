@@ -321,20 +321,6 @@ def plot_observable(
     )
 
     offset = len(component_keys)
-    for i, model in enumerate(st.session_state.models):
-        if subtype in model['outputs']:
-            x_stored, y_stored = model['outputs'][subtype]
-            color = plotly_colors[(i + offset) % len(plotly_colors)]
-            fig.add_trace(
-                go.Scatter(
-                    x=x_stored,
-                    y=y_stored['tot'] if subtype != 'mi' else np.abs(y_stored['tot']),
-                    mode='lines',
-                    name=f'Model {i + 1}',
-                    line=dict(color=color, width=2),
-                )
-            )
-
     if compare_reference and st.session_state.reference_model is not None:
         model_ref = st.session_state.reference_model
         if subtype in model_ref['outputs']:
@@ -658,13 +644,15 @@ def check_numerical(array):
     return False
 
 
-def save_model_csv(x, y, subtype, components=False):
+def save_model_csv(x, y, subtype, components=False, embed_mode=False):
     if components:
         header = f'x, {", ".join(y.keys())}'
         data_out = np.column_stack((x, *y.values()))
     else:
         header = 'x, tot'
         data_out = np.column_stack((x, y['tot']))
+    label = 'Save data' if embed_mode else 'Download data as CSV'
+
     with io.BytesIO() as buffer:
         np.savetxt(
             buffer,
@@ -672,29 +660,41 @@ def save_model_csv(x, y, subtype, components=False):
             delimiter=',',
             header=header,
         )
+        buffer.seek(0)
         st.download_button(
-            label='Download data as CSV',
-            data=buffer,
+            label=label,
+            data=buffer.getvalue(),
             file_name=f'{subtype}.csv',
             mime='text/csv',
         )
 
 
+def set_reference(st):
+    computed_outputs = st.session_state.get('computed_outputs', None)
+    if computed_outputs is not None:
+        st.session_state.reference_model = {'outputs': computed_outputs.copy()}
+
+
+def clear_reference(st):
+    st.session_state.reference_model = None
+
+
 if __name__ == '__main__':
+    embed_mode = st.query_params.get('qt', '0') == '1'
+
     set_plotly_theme_from_streamlit()
     st.set_page_config(layout='wide', page_title='OnePower Explorer')
 
-    st.image(
-        'https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png',
-        width=500,
-    )
-    st.title('The OnePower Explorer')
-    st.text('The One App to Explore the Halo Model and its Predictions.')
+    if not embed_mode:
+        st.image(
+            'https://andrej.dvrnk.si/page/wp-content/uploads/2025/08/logosmall_black_merged.png',
+            width=500,
+        )
+        st.title('The OnePower Explorer')
+        st.text('The One App to Explore the Halo Model and its Predictions.')
 
     # Session state for models
     st.session_state.init_model = Spectra()
-    if 'models' not in st.session_state:
-        st.session_state.models = []
     if 'reference_model' not in st.session_state:
         st.session_state.reference_model = None
     if 'computed_outputs' not in st.session_state:
@@ -707,21 +707,36 @@ if __name__ == '__main__':
         st.session_state.selected_outputs = [
             r'Matter Power Spectrum $P_{\mathrm{mm}}(k)$'
         ]
-
-    st.sidebar.link_button(
-        '💾 OnePower PyPi',
-        'https://pypi.org/project/onepower/',
-        width='stretch',
-    )
-    st.sidebar.link_button(
-        '📦 OnePower GitHub',
-        'https://github.com/KiDS-WL/onepower',
-        width='stretch',
-    )
+    if not embed_mode:
+        st.sidebar.link_button(
+            '💾 OnePower PyPi',
+            'https://pypi.org/project/onepower/',
+            width='stretch',
+        )
+        st.sidebar.link_button(
+            '📦 OnePower GitHub',
+            'https://github.com/KiDS-WL/onepower',
+            width='stretch',
+        )
 
     intro = read_markdown_file('intro.md')
     with st.sidebar.popover('Introduction and Quick Start Guide', width='stretch'):
         st.markdown(intro)
+    st.sidebar.divider()
+    form = st.sidebar.form('parameter_form')
+    with form, st.sidebar:
+        run_model = st.form_submit_button(
+            '🚀 Run model', width='stretch', type='primary'
+        )
+    st.sidebar.button(
+        'Set current model as reference',
+        width='stretch',
+        on_click=set_reference,
+        args=(st,),
+    )
+    st.sidebar.button(
+        'Clear reference model', width='stretch', on_click=clear_reference, args=(st,)
+    )
 
     st.sidebar.header('Input Parameters and Settings')
 
@@ -746,479 +761,454 @@ if __name__ == '__main__':
     if no_selection:
         st.error('Please select at least one observable to compute.', icon='⚠️')
 
-    with st.form('parameter_form', width=500):
-        run_model = st.form_submit_button('🚀 Run model', width='stretch')
+    with form, st.sidebar:
+        with st.sidebar.expander('General settings', expanded=False):
+            kmin = st.number_input(
+                r'$k_{\mathrm{min}}\,[h\,\mathrm{Mpc}^{-1}]$',
+                value=DEFAULT_KMIN,
+                format='%.4e',
+            )
+            kmax = st.number_input(
+                r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=DEFAULT_KMAX
+            )
+            if kmin >= kmax:
+                st.error(ERROR_MESSAGES['param_inconsistent'])
+                st.stop()
+            nk = st.number_input(r'Number of $k$ points', 10, 1000, DEFAULT_NK)
+            k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
+            mmin = st.number_input(
+                r'$M_{h,\mathrm{min}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMIN
+            )
+            mmax = st.number_input(
+                r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMAX
+            )
+            if mmin >= mmax:
+                st.error(ERROR_MESSAGES['param_inconsistent'])
+                st.stop()
+            rpmin = st.number_input(
+                r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$',
+                value=DEFAULT_RPMIN,
+            )
+            rpmax = st.number_input(
+                r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$',
+                value=DEFAULT_RPMAX,
+            )
+            if rpmin >= rpmax:
+                st.error(ERROR_MESSAGES['param_inconsistent'])
+                st.stop()
+            thetamin = st.number_input(
+                r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$',
+                value=DEFAULT_THETAMIN,
+            )
+            thetamax = st.number_input(
+                r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$',
+                value=DEFAULT_THETAMAX,
+            )
+            if thetamin >= thetamax:
+                st.error(ERROR_MESSAGES['param_inconsistent'])
+                st.stop()
 
-        with st.sidebar:
-            with st.sidebar.expander('General settings', expanded=False):
-                kmin = st.number_input(
-                    r'$k_{\mathrm{min}}\,[h\,\mathrm{Mpc}^{-1}]$',
-                    value=DEFAULT_KMIN,
-                    format='%.4e',
-                )
-                kmax = st.number_input(
-                    r'$k_{\mathrm{max}}\,[h\,\mathrm{Mpc}^{-1}]$', value=DEFAULT_KMAX
-                )
-                if kmin >= kmax:
-                    st.error(ERROR_MESSAGES['param_inconsistent'])
-                    st.stop()
-                nk = st.number_input(r'Number of $k$ points', 10, 1000, DEFAULT_NK)
-                k_vec = np.logspace(np.log10(kmin), np.log10(kmax), nk)
+        with st.sidebar.expander('Cosmological Parameters', expanded=False):
+            omega_c = st.number_input(r'$\Omega_{c}$', 0.1, 0.5, DEFAULT_OMEGA_C, 0.01)
+            omega_b = st.number_input(
+                r'$\Omega_{b}$', 0.02, 0.08, DEFAULT_OMEGA_B, 0.005
+            )
+            h = st.number_input(r'$h$', 0.5, 0.9, DEFAULT_H, 0.01)
+            ns = st.number_input(r'$n_s$', 0.8, 1.2, DEFAULT_NS, 0.005)
+            sigma_8 = st.number_input(r'$\sigma_8$', 0.6, 1.0, DEFAULT_SIGMA_8, 0.01)
+            z_vec = st.number_input(r'Redshift $z$', 0.0, 2.0, DEFAULT_Z_VEC, 0.1)
+            m_nu = st.number_input(
+                r'Sum of Neutrino Masses $m_{\nu} [eV]$',
+                0.0,
+                1.0,
+                DEFAULT_M_NU,
+                0.01,
+            )
+            w0 = st.number_input(
+                r'Dark Energy Equation of State $w_0$', -1.5, -0.5, DEFAULT_W0, 0.05
+            )
+            wa = st.number_input(
+                r'Dark Energy Equation of State $w_a$', 0.0, 1.0, DEFAULT_WA, 0.05
+            )
+            tcmb = st.number_input(
+                r'CMB Temperature $T_{\mathrm{cmb}} [K]$',
+                2.0,
+                3.0,
+                DEFAULT_TCMB,
+                0.01,
+            )
 
-                mmin = st.number_input(
-                    r'$M_{h,\mathrm{min}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMIN
+        with st.sidebar.expander('Halo Model Parameters', expanded=False):
+            dewiggle = st.toggle('Dewiggle', value=False)
+            pointmass = st.toggle('Point Mass', value=False)
+            # response = st.toggle("Response", value=False)
+            response = False
+            mdef_model = st.selectbox(
+                'Mass definition model',
+                ('SOMean', 'SOVirial', 'SOCritical', 'FOF'),
+            )
+            hmf_model = st.selectbox(
+                'Halo mass function model',
+                (
+                    'Tinker10',
+                    'ST',
+                    'PS',
+                    'SMT',
+                    'Jenkins',
+                    'Warren',
+                    'Reed03',
+                    'Reed07',
+                    'Peacock',
+                    'Angulo',
+                    'AnguloBound',
+                    'Watson',
+                    'Watson_FoF',
+                    'Crocce',
+                    'Courtin',
+                    'Bhattacharya',
+                    'Tinker08',
+                    'Behroozi',
+                    'Pillepich',
+                    'Manera',
+                    'Ishiyama',
+                    'Bocquet200mDMOnly',
+                    'Bocquet200mHydro',
+                    'Bocquet200cDMOnly',
+                    'Bocquet200cHydro',
+                    'Bocquet500cDMOnly',
+                    'Bocquet500cHydro',
+                ),
+            )
+            bias_model = st.selectbox(
+                'Halo bias function model',
+                (
+                    'Tinker10',
+                    'Tinker10PBSplit',
+                    'ST99',
+                    'Mo96',
+                    'Jing98',
+                    'SMT01',
+                    'Seljak04',
+                    'Seljak04Cosmo',
+                    'Tinker05',
+                    'Mandelbaum05',
+                    'Pillepich10',
+                    'Manera10',
+                    'TinkerSD05',
+                ),
+            )
+            halo_profile_model_dm = st.selectbox(
+                'Halo profile model (matter)',
+                (
+                    'NFW',
+                    'NFWInf',
+                    'GeneralizedNFW',
+                    'GeneralizedNFWInf',
+                    'Einasto',
+                    'Hernquist',
+                    'HernquistInf',
+                    'Moore',
+                    'MooreInf',
+                    'Constant',
+                    'CoreNFW',
+                    'PowerLawWithExpCut',
+                ),
+            )
+            halo_profile_model_sat = st.selectbox(
+                'Halo profile model (galaxies)',
+                (
+                    'NFW',
+                    'NFWInf',
+                    'GeneralizedNFW',
+                    'GeneralizedNFWInf',
+                    'Einasto',
+                    'Hernquist',
+                    'HernquistInf',
+                    'Moore',
+                    'MooreInf',
+                    'Constant',
+                    'CoreNFW',
+                    'PowerLawWithExpCut',
+                ),
+            )
+            halo_concentration_model_dm = st.selectbox(
+                'Halo concentration model (matter)',
+                (
+                    'Duffy08',
+                    'Bullock01',
+                    'Bullock01Power',
+                    'Maccio07',
+                    'Zehavi11',
+                    'Ludlow16',
+                    'Ludlow16Empirical',
+                ),
+            )
+            halo_concentration_model_sat = st.selectbox(
+                'Halo concentration model (galaxies)',
+                (
+                    'Duffy08',
+                    'Bullock01',
+                    'Bullock01Power',
+                    'Maccio07',
+                    'Zehavi11',
+                    'Ludlow16',
+                    'Ludlow16Empirical',
+                ),
+            )
+            overdensity = st.number_input('Halo overdensity', 0.0, 500.0, 200.0, 1.0)
+            delta_c = st.number_input(
+                r'Collapse threshold $\delta_c$',
+                0.0,
+                10.0,
+                1.696,
+                0.001,
+                format='%0.3f',
+            )
+            norm_cen = st.number_input(
+                r'Normalization of $c(M)$ relation (matter)', 0.0, 2.0, 1.0, 0.01
+            )
+            norm_sat = st.number_input(
+                r'Normalization of $c(M)$ relation (galaxies)', 0.0, 2.0, 1.0, 0.01
+            )
+            eta_cen = st.number_input(
+                r'Halo bloating $\eta$ (matter)', -1.0, 1.0, 0.0, 0.01
+            )
+            eta_sat = st.number_input(
+                r'Halo bloating $\eta$ (galaxies)', -1.0, 1.0, 0.0, 0.01
+            )
+            hmcode_ingredients = st.selectbox(
+                'HMCode ingredients', [None, 'mead2020', 'mead2020_feedback', 'fit']
+            )
+            if hmcode_ingredients == 'mead2020_feedback':
+                log10T_AGN = st.number_input(
+                    r'$\log_{10}T_{\mathrm{AGN}}$', 0.0, 10.0, 7.8, 0.01
                 )
-                mmax = st.number_input(
-                    r'$M_{h,\mathrm{max}}\,[h^{-1}\,M_{\odot}]$', value=DEFAULT_MMAX
-                )
-                if mmin >= mmax:
-                    st.error(ERROR_MESSAGES['param_inconsistent'])
-                    st.stop()
+            else:
+                log10T_AGN = 7.8
+            if hmcode_ingredients == 'fit':
+                mb = st.number_input(r'$M_b$', 8.0, 15.0, 13.87, 0.01)
+            else:
+                mb = 13.87
+            nonlinear_mode = st.selectbox(
+                'Nonlinear mode', [None, 'bnl', 'hmcode', 'fortuna']
+            )
+            if nonlinear_mode == 'fortuna':
+                t_eff = st.number_input(r'$t_{\mathrm{eff}}$', 0.0, 1.0, 0.0, 0.01)
+            else:
+                t_eff = 0.0
 
-                rpmin = st.number_input(
-                    r'$r_{\mathrm{p, min}}\,[h^{-1}\,\mathrm{Mpc}]$',
-                    value=DEFAULT_RPMIN,
-                )
-                rpmax = st.number_input(
-                    r'$r_{\mathrm{p, max}}\,[h^{-1}\,\mathrm{Mpc}]$',
-                    value=DEFAULT_RPMAX,
-                )
-                if rpmin >= rpmax:
-                    st.error(ERROR_MESSAGES['param_inconsistent'])
-                    st.stop()
+        with st.sidebar.expander('HOD Parameters', expanded=False):
+            hod_model = st.selectbox(
+                'HOD model',
+                ('Cacciato', 'Zheng', 'Simple', 'Zehavi', 'Zhai'),
+            )
+            obs_min = st.number_input(
+                r'Min Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 8.0, 0.1
+            )
+            obs_max = st.number_input(
+                r'Max Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
+            )
+            if obs_min >= obs_max:
+                st.error(ERROR_MESSAGES['param_inconsistent'])
+                st.stop()
+            hod_settings = {
+                'observables_file': None,
+                'zmin': np.array([0.0]),
+                'zmax': np.array([2.0]),
+                'obs_min': np.array([obs_min]),
+                'obs_max': np.array([obs_max]),
+                'nz': 15,
+                'nobs': 300,
+                'observable_h_unit': '1/h^2',
+            }
+            obs_settings = {
+                'observables_file': None,
+                'zmin': np.array([z_vec]),
+                'zmax': np.array([z_vec]),
+                'obs_min': np.array([8.0]),
+                'obs_max': np.array([12.0]),
+                'nz': 1,
+                'nobs': 300,
+                'observable_h_unit': '1/h^2',
+            }
 
-                thetamin = st.number_input(
-                    r'$\theta_{\mathrm{min}}\,[\mathrm{arcmin}]$',
-                    value=DEFAULT_THETAMIN,
+            if hod_model == 'Cacciato':
+                compute_observable = True
+                log10_obs_norm_c = st.number_input(
+                    r'$\log_{10} O_{\mathrm{norm, c}}$', value=9.95
                 )
-                thetamax = st.number_input(
-                    r'$\theta_{\mathrm{max}}\,[\mathrm{arcmin}]$',
-                    value=DEFAULT_THETAMAX,
+                log10_m_ch = st.number_input(
+                    r'$\log_{10} M_{\mathcal{ch}}$', value=11.24
                 )
-                if thetamin >= thetamax:
-                    st.error(ERROR_MESSAGES['param_inconsistent'])
-                    st.stop()
-
-            with st.sidebar.expander('Cosmological Parameters', expanded=False):
-                omega_c = st.number_input(
-                    r'$\Omega_{c}$', 0.1, 0.5, DEFAULT_OMEGA_C, 0.01
-                )
-                omega_b = st.number_input(
-                    r'$\Omega_{b}$', 0.02, 0.08, DEFAULT_OMEGA_B, 0.005
-                )
-                h = st.number_input(r'$h$', 0.5, 0.9, DEFAULT_H, 0.01)
-                ns = st.number_input(r'$n_s$', 0.8, 1.2, DEFAULT_NS, 0.005)
-                sigma_8 = st.number_input(
-                    r'$\sigma_8$', 0.6, 1.0, DEFAULT_SIGMA_8, 0.01
-                )
-                z_vec = st.number_input(r'Redshift $z$', 0.0, 2.0, DEFAULT_Z_VEC, 0.1)
-                m_nu = st.number_input(
-                    r'Sum of Neutrino Masses $m_{\nu} [eV]$',
-                    0.0,
+                g1 = st.number_input(r'$\gamma_1$', value=3.18)
+                g2 = st.number_input(r'$\gamma_2$', value=0.245)
+                sigma_log10_O_c = st.number_input(r'$\sigma_{\mathrm{c}}$', value=0.157)
+                norm_s = st.number_input(r'$\mathrm{norm}_{\mathrm{s}}$', value=0.562)
+                pivot = st.number_input(r'$M_{\mathrm{pivot}}$', value=12.0)
+                alpha_s = st.number_input(r'$\alpha_{\mathrm{s}}$', value=-1.18)
+                beta_s = st.number_input(r'$\beta_{\mathrm{s}}$', value=2.0)
+                b0 = st.number_input(r'$b_0$', value=-1.17)
+                b1 = st.number_input(r'$b_1$', value=1.53)
+                b2 = st.number_input(r'$b_2$', value=-0.217)
+                A_cen = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{cen}}$',
+                    -1.0,
                     1.0,
-                    DEFAULT_M_NU,
-                    0.01,
-                )
-                w0 = st.number_input(
-                    r'Dark Energy Equation of State $w_0$', -1.5, -0.5, DEFAULT_W0, 0.05
-                )
-                wa = st.number_input(
-                    r'Dark Energy Equation of State $w_a$', 0.0, 1.0, DEFAULT_WA, 0.05
-                )
-                tcmb = st.number_input(
-                    r'CMB Temperature $T_{\mathrm{cmb}} [K]$',
-                    2.0,
-                    3.0,
-                    DEFAULT_TCMB,
-                    0.01,
-                )
-
-            with st.sidebar.expander('Halo Model Parameters', expanded=False):
-                dewiggle = st.toggle('Dewiggle', value=False)
-                pointmass = st.toggle('Point Mass', value=False)
-                # response = st.toggle("Response", value=False)
-                response = False
-                mdef_model = st.selectbox(
-                    'Mass definition model',
-                    ('SOMean', 'SOVirial', 'SOCritical', 'FOF'),
-                )
-                hmf_model = st.selectbox(
-                    'Halo mass function model',
-                    (
-                        'Tinker10',
-                        'ST',
-                        'PS',
-                        'SMT',
-                        'Jenkins',
-                        'Warren',
-                        'Reed03',
-                        'Reed07',
-                        'Peacock',
-                        'Angulo',
-                        'AnguloBound',
-                        'Watson',
-                        'Watson_FoF',
-                        'Crocce',
-                        'Courtin',
-                        'Bhattacharya',
-                        'Tinker08',
-                        'Behroozi',
-                        'Pillepich',
-                        'Manera',
-                        'Ishiyama',
-                        'Bocquet200mDMOnly',
-                        'Bocquet200mHydro',
-                        'Bocquet200cDMOnly',
-                        'Bocquet200cHydro',
-                        'Bocquet500cDMOnly',
-                        'Bocquet500cHydro',
-                    ),
-                )
-                bias_model = st.selectbox(
-                    'Halo bias function model',
-                    (
-                        'Tinker10',
-                        'Tinker10PBSplit',
-                        'ST99',
-                        'Mo96',
-                        'Jing98',
-                        'SMT01',
-                        'Seljak04',
-                        'Seljak04Cosmo',
-                        'Tinker05',
-                        'Mandelbaum05',
-                        'Pillepich10',
-                        'Manera10',
-                        'TinkerSD05',
-                    ),
-                )
-                halo_profile_model_dm = st.selectbox(
-                    'Halo profile model (matter)',
-                    (
-                        'NFW',
-                        'NFWInf',
-                        'GeneralizedNFW',
-                        'GeneralizedNFWInf',
-                        'Einasto',
-                        'Hernquist',
-                        'HernquistInf',
-                        'Moore',
-                        'MooreInf',
-                        'Constant',
-                        'CoreNFW',
-                        'PowerLawWithExpCut',
-                    ),
-                )
-                halo_profile_model_sat = st.selectbox(
-                    'Halo profile model (galaxies)',
-                    (
-                        'NFW',
-                        'NFWInf',
-                        'GeneralizedNFW',
-                        'GeneralizedNFWInf',
-                        'Einasto',
-                        'Hernquist',
-                        'HernquistInf',
-                        'Moore',
-                        'MooreInf',
-                        'Constant',
-                        'CoreNFW',
-                        'PowerLawWithExpCut',
-                    ),
-                )
-                halo_concentration_model_dm = st.selectbox(
-                    'Halo concentration model (matter)',
-                    (
-                        'Duffy08',
-                        'Bullock01',
-                        'Bullock01Power',
-                        'Maccio07',
-                        'Zehavi11',
-                        'Ludlow16',
-                        'Ludlow16Empirical',
-                    ),
-                )
-                halo_concentration_model_sat = st.selectbox(
-                    'Halo concentration model (galaxies)',
-                    (
-                        'Duffy08',
-                        'Bullock01',
-                        'Bullock01Power',
-                        'Maccio07',
-                        'Zehavi11',
-                        'Ludlow16',
-                        'Ludlow16Empirical',
-                    ),
-                )
-                overdensity = st.number_input(
-                    'Halo overdensity', 0.0, 500.0, 200.0, 1.0
-                )
-                delta_c = st.number_input(
-                    r'Collapse threshold $\delta_c$',
                     0.0,
-                    10.0,
-                    1.696,
-                    0.001,
-                    format='%0.3f',
+                    0.01,
                 )
-                norm_cen = st.number_input(
-                    r'Normalization of $c(M)$ relation (matter)', 0.0, 2.0, 1.0, 0.01
+                A_sat = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{sat}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
                 )
-                norm_sat = st.number_input(
-                    r'Normalization of $c(M)$ relation (galaxies)', 0.0, 2.0, 1.0, 0.01
-                )
-                eta_cen = st.number_input(
-                    r'Halo bloating $\eta$ (matter)', -1.0, 1.0, 0.0, 0.01
-                )
-                eta_sat = st.number_input(
-                    r'Halo bloating $\eta$ (galaxies)', -1.0, 1.0, 0.0, 0.01
-                )
-
-                hmcode_ingredients = st.selectbox(
-                    'HMCode ingredients', [None, 'mead2020', 'mead2020_feedback', 'fit']
-                )
-                if hmcode_ingredients == 'mead2020_feedback':
-                    log10T_AGN = st.number_input(
-                        r'$\log_{10}T_{\mathrm{AGN}}$', 0.0, 10.0, 7.8, 0.01
-                    )
-                else:
-                    log10T_AGN = 7.8
-
-                if hmcode_ingredients == 'fit':
-                    mb = st.number_input(r'$M_b$', 8.0, 15.0, 13.87, 0.01)
-                else:
-                    mb = 13.87
-
-                nonlinear_mode = st.selectbox(
-                    'Nonlinear mode', [None, 'bnl', 'hmcode', 'fortuna']
-                )
-                if nonlinear_mode == 'fortuna':
-                    t_eff = st.number_input(r'$t_{\mathrm{eff}}$', 0.0, 1.0, 0.0, 0.01)
-                else:
-                    t_eff = 0.0
-
-            with st.sidebar.expander('HOD Parameters', expanded=False):
-                hod_model = st.selectbox(
-                    'HOD model',
-                    ('Cacciato', 'Zheng', 'Simple', 'Zehavi', 'Zhai'),
-                )
-                obs_min = st.number_input(
-                    r'Min Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 8.0, 0.1
-                )
-                obs_max = st.number_input(
-                    r'Max Observable Mass $[h^{-2}\,M_{\odot}]$', 8.0, 15.0, 12.0, 0.1
-                )
-                if obs_min >= obs_max:
-                    st.error(ERROR_MESSAGES['param_inconsistent'])
-                    st.stop()
-                hod_settings = {
-                    'observables_file': None,
-                    'zmin': np.array([0.0]),
-                    'zmax': np.array([2.0]),
-                    'obs_min': np.array([obs_min]),
-                    'obs_max': np.array([obs_max]),
-                    'nz': 15,
-                    'nobs': 300,
-                    'observable_h_unit': '1/h^2',
+                hod_params = {
+                    'log10_obs_norm_c': log10_obs_norm_c,
+                    'log10_m_ch': log10_m_ch,
+                    'g1': g1,
+                    'g2': g2,
+                    'sigma_log10_O_c': sigma_log10_O_c,
+                    'norm_s': norm_s,
+                    'pivot': pivot,
+                    'alpha_s': alpha_s,
+                    'beta_s': beta_s,
+                    'b0': b0,
+                    'b1': b1,
+                    'b2': b2,
+                    'A_cen': A_cen,
+                    'A_sat': A_sat,
                 }
-                obs_settings = {
-                    'observables_file': None,
-                    'zmin': np.array([z_vec]),
-                    'zmax': np.array([z_vec]),
-                    'obs_min': np.array([8.0]),
-                    'obs_max': np.array([12.0]),
-                    'nz': 1,
-                    'nobs': 300,
-                    'observable_h_unit': '1/h^2',
-                }
-                if hod_model == 'Cacciato':
-                    compute_observable = True
-                    log10_obs_norm_c = st.number_input(
-                        r'$\log_{10} O_{\mathrm{norm, c}}$', value=9.95
-                    )
-                    log10_m_ch = st.number_input(
-                        r'$\log_{10} M_{\mathcal{ch}}$', value=11.24
-                    )
-                    g1 = st.number_input(r'$\gamma_1$', value=3.18)
-                    g2 = st.number_input(r'$\gamma_2$', value=0.245)
-                    sigma_log10_O_c = st.number_input(
-                        r'$\sigma_{\mathrm{c}}$', value=0.157
-                    )
-                    norm_s = st.number_input(
-                        r'$\mathrm{norm}_{\mathrm{s}}$', value=0.562
-                    )
-                    pivot = st.number_input(r'$M_{\mathrm{pivot}}$', value=12.0)
-                    alpha_s = st.number_input(r'$\alpha_{\mathrm{s}}$', value=-1.18)
-                    beta_s = st.number_input(r'$\beta_{\mathrm{s}}$', value=2.0)
-                    b0 = st.number_input(r'$b_0$', value=-1.17)
-                    b1 = st.number_input(r'$b_1$', value=1.53)
-                    b2 = st.number_input(r'$b_2$', value=-0.217)
-                    A_cen = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{cen}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    A_sat = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{sat}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    hod_params = {
-                        'log10_obs_norm_c': log10_obs_norm_c,
-                        'log10_m_ch': log10_m_ch,
-                        'g1': g1,
-                        'g2': g2,
-                        'sigma_log10_O_c': sigma_log10_O_c,
-                        'norm_s': norm_s,
-                        'pivot': pivot,
-                        'alpha_s': alpha_s,
-                        'beta_s': beta_s,
-                        'b0': b0,
-                        'b1': b1,
-                        'b2': b2,
-                        'A_cen': A_cen,
-                        'A_sat': A_sat,
-                    }
 
-                if hod_model == 'Zheng':
-                    compute_observable = False
-                    log10_Mmin = st.number_input(
-                        r'$\log_{10}M_{\mathrm{min}}$', value=12.0
-                    )
-                    log10_M0 = st.number_input(r'$\log_{10}M_{0}$', value=12.0)
-                    log10_M1 = st.number_input(r'$\log_{10}M_{1}$', value=13.0)
-                    sigma = st.number_input(r'$\sigma$', value=0.15)
-                    alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{cen}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    A_sat = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{sat}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    hod_params = {
-                        'log10_Mmin': log10_Mmin,
-                        'log10_M0': log10_M0,
-                        'log10_M1': log10_M1,
-                        'sigma': sigma,
-                        'alpha': alpha,
-                        'A_cen': A_cen,
-                        'A_sat': A_sat,
-                    }
-                if hod_model == 'Simple':
-                    compute_observable = False
-                    log10_Mmin = st.number_input(
-                        r'$\log_{10}M_{\mathrm{min}}$', value=12.0
-                    )
-                    log10_Msat = st.number_input(
-                        r'$\log_{10}M_{\mathrm{sat}}$', value=13.0
-                    )
-                    alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{cen}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    A_sat = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{sat}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    hod_params = {
-                        'log10_Mmin': log10_Mmin,
-                        'log10_Msat': log10_Msat,
-                        'alpha': alpha,
-                        'A_cen': A_cen,
-                        'A_sat': A_sat,
-                    }
-                if hod_model == 'Zehavi':
-                    compute_observable = False
-                    log10_Mmin = st.number_input(
-                        r'$\log_{10}M_{\mathrm{min}}$', value=12.0
-                    )
-                    log10_Msat = st.number_input(
-                        r'$\log_{10}M_{\mathrm{sat}}$', value=13.0
-                    )
-                    alpha = st.number_input(r'$\alpha$', value=1.0)
-                    A_cen = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{cen}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    A_sat = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{sat}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    hod_params = {
-                        'log10_Mmin': log10_Mmin,
-                        'log10_Msat': log10_Msat,
-                        'alpha': alpha,
-                        'A_cen': A_cen,
-                        'A_sat': A_sat,
-                    }
-                if hod_model == 'Zhai':
-                    compute_observable = False
-                    log10_Mmin = st.number_input(
-                        r'$\log_{10}M_{\mathrm{min}}$', value=13.58
-                    )
-                    log10_Msat = st.number_input(
-                        r'$\log_{10}M_{\mathrm{sat}}$', value=14.87
-                    )
-                    log10_Mcut = st.number_input(
-                        r'$\log_{10}M_{\mathrm{cut}}$', value=12.32
-                    )
-                    sigma = st.number_input(r'$\sigma$', value=0.82)
-                    alpha = st.number_input(r'$\alpha$', value=0.41)
-                    A_cen = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{cen}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    A_sat = st.number_input(
-                        r'Assembly bias parameter $A_{\mathrm{sat}}$',
-                        -1.0,
-                        1.0,
-                        0.0,
-                        0.01,
-                    )
-                    hod_params = {
-                        'log10_Mmin': log10_Mmin,
-                        'log10_Msat': log10_Msat,
-                        'log10_Mcut': log10_Mcut,
-                        'sigma': sigma,
-                        'alpha': alpha,
-                        'A_cen': A_cen,
-                        'A_sat': A_sat,
-                    }
-
-            with st.sidebar.expander('IA Parameters', expanded=False):
-                st.warning(
-                    WARNINGS['IA'],
-                    icon='⚠️',
+            if hod_model == 'Zheng':
+                compute_observable = False
+                log10_Mmin = st.number_input(r'$\log_{10}M_{\mathrm{min}}$', value=12.0)
+                log10_M0 = st.number_input(r'$\log_{10}M_{0}$', value=12.0)
+                log10_M1 = st.number_input(r'$\log_{10}M_{1}$', value=13.0)
+                sigma = st.number_input(r'$\sigma$', value=0.15)
+                alpha = st.number_input(r'$\alpha$', value=1.0)
+                A_cen = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{cen}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
                 )
+                A_sat = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{sat}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                hod_params = {
+                    'log10_Mmin': log10_Mmin,
+                    'log10_M0': log10_M0,
+                    'log10_M1': log10_M1,
+                    'sigma': sigma,
+                    'alpha': alpha,
+                    'A_cen': A_cen,
+                    'A_sat': A_sat,
+                }
 
+            if hod_model == 'Simple':
+                compute_observable = False
+                log10_Mmin = st.number_input(r'$\log_{10}M_{\mathrm{min}}$', value=12.0)
+                log10_Msat = st.number_input(r'$\log_{10}M_{\mathrm{sat}}$', value=13.0)
+                alpha = st.number_input(r'$\alpha$', value=1.0)
+                A_cen = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{cen}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                A_sat = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{sat}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                hod_params = {
+                    'log10_Mmin': log10_Mmin,
+                    'log10_Msat': log10_Msat,
+                    'alpha': alpha,
+                    'A_cen': A_cen,
+                    'A_sat': A_sat,
+                }
+
+            if hod_model == 'Zehavi':
+                compute_observable = False
+                log10_Mmin = st.number_input(r'$\log_{10}M_{\mathrm{min}}$', value=12.0)
+                log10_Msat = st.number_input(r'$\log_{10}M_{\mathrm{sat}}$', value=13.0)
+                alpha = st.number_input(r'$\alpha$', value=1.0)
+                A_cen = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{cen}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                A_sat = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{sat}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                hod_params = {
+                    'log10_Mmin': log10_Mmin,
+                    'log10_Msat': log10_Msat,
+                    'alpha': alpha,
+                    'A_cen': A_cen,
+                    'A_sat': A_sat,
+                }
+
+            if hod_model == 'Zhai':
+                compute_observable = False
+                log10_Mmin = st.number_input(
+                    r'$\log_{10}M_{\mathrm{min}}$', value=13.58
+                )
+                log10_Msat = st.number_input(
+                    r'$\log_{10}M_{\mathrm{sat}}$', value=14.87
+                )
+                log10_Mcut = st.number_input(
+                    r'$\log_{10}M_{\mathrm{cut}}$', value=12.32
+                )
+                sigma = st.number_input(r'$\sigma$', value=0.82)
+                alpha = st.number_input(r'$\alpha$', value=0.41)
+                A_cen = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{cen}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                A_sat = st.number_input(
+                    r'Assembly bias parameter $A_{\mathrm{sat}}$',
+                    -1.0,
+                    1.0,
+                    0.0,
+                    0.01,
+                )
+                hod_params = {
+                    'log10_Mmin': log10_Mmin,
+                    'log10_Msat': log10_Msat,
+                    'log10_Mcut': log10_Mcut,
+                    'sigma': sigma,
+                    'alpha': alpha,
+                    'A_cen': A_cen,
+                    'A_sat': A_sat,
+                }
+
+        with st.sidebar.expander('IA Parameters', expanded=False):
+            st.warning(
+                WARNINGS['IA'],
+                icon='⚠️',
+            )
+    st.sidebar.divider()
     credit = read_markdown_file('credits.md')
     with st.sidebar.popover('Attribution', width='stretch'):
         st.markdown(credit)
@@ -1298,20 +1288,6 @@ if __name__ == '__main__':
 
     computed_outputs = st.session_state.get('computed_outputs', None)
     if computed_outputs is not None:
-        col1, col2 = st.columns(2, width=500)
-        if col1.button('Add current model for comparison', width='stretch'):
-            st.session_state.models.append(
-                {'params': params.copy(), 'outputs': computed_outputs.copy()}
-            )
-        if col1.button('Clear saved models', width='stretch'):
-            st.session_state.models = []
-
-        if col2.button('Set current model as reference', width='stretch'):
-            st.session_state.reference_model = {'outputs': computed_outputs.copy()}
-
-        if col2.button('Clear reference model', width='stretch'):
-            st.session_state.reference_model = None
-
         selected_outputs = st.session_state.selected_outputs
         if not no_selection:
             # tabs = st.tabs(selected_outputs, width='stretch')
@@ -1414,4 +1390,6 @@ if __name__ == '__main__':
                                 height='content',
                                 key=f'fig_{output}_ref',
                             )
-                        save_model_csv(x, y, subtype, components=components)
+                        save_model_csv(
+                            x, y, subtype, components=components, embed_mode=embed_mode
+                        )
