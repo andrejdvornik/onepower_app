@@ -990,7 +990,9 @@ if __name__ == '__main__':
             else:
                 mb = 13.87
             nonlinear_mode = st.selectbox(
-                'Nonlinear mode', [None, 'bnl', 'hmcode', 'fortuna']
+                #'Nonlinear mode', [None, 'bnl', 'hmcode', 'fortuna']
+                'Nonlinear mode',
+                [None, 'hmcode', 'fortuna'],
             )
             if nonlinear_mode == 'fortuna':
                 t_eff = st.number_input(r'$t_{\mathrm{eff}}$', 0.0, 1.0, 0.0, 0.01)
