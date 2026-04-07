@@ -15,7 +15,7 @@ from pk_to_real import PkTransformer
 
 with Path.open('load_mathjax.js') as f:
     js = f.read()
-    st.components.v1.html(f'<script>{js}</script>', height=0)
+    st.html(f'<script>{js}</script>', unsafe_allow_javascript=True)
 
 
 # Constants for default values
