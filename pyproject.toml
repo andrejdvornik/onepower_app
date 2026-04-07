@@ -17,11 +17,10 @@ authors = [
 ]
 license = "MIT"
 
-requires-python = ">=3.10, <3.13"
+requires-python = ">=3.10"
 dependencies = [
     "streamlit",
     "plotly",
-    "halomod @ git+https://github.com/halomod/halomod.git@main",
     "onepower>=0.7.0",
     "pre-commit",
     "mathjax",
