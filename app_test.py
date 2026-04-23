@@ -1452,8 +1452,6 @@ if __name__ == '__main__':
         @st.dialog(item['label'], width='large')
         def _dialog():
             if item['type'] == 'combined_pk':
-                # st.subheader("Power Spectra")
-
                 fig_combined = plot_combined_pk(
                     computed_outputs,
                     item['selected_outputs'],
@@ -1485,8 +1483,6 @@ if __name__ == '__main__':
             else:
                 output = item['output']
                 category, subtype = OBSERVABLE_MAP[output]
-
-                # st.subheader(output)
 
                 if subtype in ['wtheta', 'gamma', 'xip', 'xim']:
                     if params['z_vec'][0] == 0.0:
