@@ -758,6 +758,10 @@ def clear_reference(st):
     st.session_state.reference_model = None
 
 
+def open_dialog(i):
+    st.session_state['active_dialog'] = i
+
+
 if __name__ == '__main__':
     embed_mode = st.query_params.get('qt', '0') == '1'
 
@@ -1395,9 +1399,9 @@ if __name__ == '__main__':
                 )
 
             with st.container(horizontal=True):
-                for _i, item in enumerate(grid_items):
-                    if item['type'] == 'combined_pk':
-                        with st.container(width=260, height=260):
+                for i, item in enumerate(grid_items):
+                    with st.container(width=260, height=260):
+                        if item['type'] == 'combined_pk':
                             x, y = computed_outputs['mm']
                             fig_preview = plot_observable_small(
                                 x,
@@ -1413,52 +1417,10 @@ if __name__ == '__main__':
                                 title=item['label'],
                             )
 
-                            with st.popover('Open'):
-                                fig_combined = plot_combined_pk(
-                                    computed_outputs,
-                                    item['selected_outputs'],
-                                    compare_reference,
-                                )
+                            if st.button('Open', key=f'open_{i}'):
+                                st.session_state['active_dialog'] = i
 
-                                st.plotly_chart(
-                                    fig_combined,
-                                    width='content',
-                                    height='content',
-                                    key='fig_combined',
-                                )
-
-                                for output in item['selected_outputs']:
-                                    category, subtype = OBSERVABLE_MAP[output]
-
-                                    if (
-                                        category != 'pk'
-                                        or subtype not in computed_outputs
-                                        or subtype == 'gb'
-                                    ):
-                                        continue
-
-                                    if (
-                                        compare_reference
-                                        and st.session_state.reference_model is not None
-                                    ):
-                                        x, y = computed_outputs[subtype]
-                                        x_ref, y_ref = st.session_state.reference_model[
-                                            'outputs'
-                                        ][subtype]
-
-                                        fig_ratio = plot_ratio(
-                                            x, y, x_ref, y_ref, subtype, name=output
-                                        )
-
-                                        st.plotly_chart(
-                                            fig_ratio,
-                                            width='content',
-                                            # height='content',
-                                            key=f'fig_{output}_ref',
-                                        )
-
-                    else:
-                        with st.container(width=260, height=260):
+                        else:
                             output = item['output']
                             category, subtype = OBSERVABLE_MAP[output]
 
@@ -1479,65 +1441,94 @@ if __name__ == '__main__':
                                     title=output,
                                 )
 
-                            with st.popover('Open'):
-                                # Warnings
-                                if subtype in ['wtheta', 'gamma', 'xip', 'xim']:
-                                    if params['z_vec'][0] == 0.0:
-                                        st.warning(
-                                            WARNINGS['redshift'].format(output=output),
-                                            icon='⚠️',
-                                            width=700,
-                                        )
-                                    else:
-                                        st.warning(
-                                            WARNINGS['projection'].format(
-                                                output=output
-                                            ),
-                                            icon='⚠️',
-                                            width=700,
-                                        )
+                            if st.button('Open', key=f'open_{i}'):
+                                st.session_state['active_dialog'] = i
 
-                                if subtype in computed_outputs:
-                                    x, y = computed_outputs[subtype]
+    active = st.session_state.get('active_dialog', None)
 
-                                    fig_main = plot_observable(
-                                        x,
-                                        y,
-                                        subtype,
-                                        compare_reference,
-                                        components=components,
-                                    )
+    if active is not None:
+        item = grid_items[active]
 
-                                    st.plotly_chart(
-                                        fig_main,
-                                        width='content',
-                                        height='content',
-                                        key=f'fig_{output}',
-                                    )
+        @st.dialog(item['label'], width='large')
+        def _dialog():
+            if item['type'] == 'combined_pk':
+                # st.subheader("Power Spectra")
 
-                                    if (
-                                        compare_reference
-                                        and st.session_state.reference_model is not None
-                                    ):
-                                        x_ref, y_ref = st.session_state.reference_model[
-                                            'outputs'
-                                        ][subtype]
+                fig_combined = plot_combined_pk(
+                    computed_outputs,
+                    item['selected_outputs'],
+                    compare_reference,
+                )
+                st.plotly_chart(fig_combined, width='stretch')
 
-                                        fig_ratio = plot_ratio(
-                                            x, y, x_ref, y_ref, subtype
-                                        )
+                for output in item['selected_outputs']:
+                    category, subtype = OBSERVABLE_MAP[output]
 
-                                        st.plotly_chart(
-                                            fig_ratio,
-                                            width='content',
-                                            height='content',
-                                            key=f'fig_{output}_ref',
-                                        )
+                    if (
+                        category != 'pk'
+                        or subtype not in computed_outputs
+                        or subtype == 'gb'
+                    ):
+                        continue
 
-                                    save_model_csv(
-                                        x,
-                                        y,
-                                        subtype,
-                                        components=components,
-                                        embed_mode=embed_mode,
-                                    )
+                    if (
+                        compare_reference
+                        and st.session_state.reference_model is not None
+                    ):
+                        x, y = computed_outputs[subtype]
+                        x_ref, y_ref = st.session_state.reference_model['outputs'][
+                            subtype
+                        ]
+                        fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype, name=output)
+                        st.plotly_chart(fig_ratio, width='stretch')
+
+            else:
+                output = item['output']
+                category, subtype = OBSERVABLE_MAP[output]
+
+                # st.subheader(output)
+
+                if subtype in ['wtheta', 'gamma', 'xip', 'xim']:
+                    if params['z_vec'][0] == 0.0:
+                        st.warning(
+                            WARNINGS['redshift'].format(output=output),
+                            icon='⚠️',
+                        )
+                    else:
+                        st.warning(
+                            WARNINGS['projection'].format(output=output),
+                            icon='⚠️',
+                        )
+
+                if subtype in computed_outputs:
+                    x, y = computed_outputs[subtype]
+
+                    fig_main = plot_observable(
+                        x,
+                        y,
+                        subtype,
+                        compare_reference,
+                        components=components,
+                    )
+                    st.plotly_chart(fig_main, width='stretch')
+
+                    if (
+                        compare_reference
+                        and st.session_state.reference_model is not None
+                    ):
+                        x_ref, y_ref = st.session_state.reference_model['outputs'][
+                            subtype
+                        ]
+                        fig_ratio = plot_ratio(x, y, x_ref, y_ref, subtype)
+                        st.plotly_chart(fig_ratio, width='stretch')
+
+                    save_model_csv(
+                        x,
+                        y,
+                        subtype,
+                        components=components,
+                        embed_mode=embed_mode,
+                    )
+
+        _dialog()
+        st.session_state.active_dialog = None
