@@ -89,6 +89,8 @@ ignore = [
     "C408",   # Unnecessary list comprehension - rewrite as a generator expression
     "F841",   # Unused variables
     "SIM103", # Bool
+    "PERF402",
+    "PERF401",
 ]
 
 # Import organization (Ruff's import sorting is enabled by default)
